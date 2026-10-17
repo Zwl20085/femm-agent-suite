@@ -1,0 +1,22 @@
+{
+  "name": "femm-agent-suite-video",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Remotion source for the FEMM Agent Suite introduction video",
+  "scripts": {
+    "dev": "remotion studio",
+    "render": "remotion render src/index.ts FemmAgentSuiteIntro out/femm-agent-suite-intro.mp4",
+    "still": "remotion still src/index.ts FemmAgentSuiteIntro out/still.png"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.530",
+    "@remotion/google-fonts": "4.0.530",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.530"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.12",
+    "typescript": "5.6.3"
+  }
+}

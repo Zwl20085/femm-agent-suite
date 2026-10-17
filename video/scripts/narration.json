@@ -1,0 +1,99 @@
+{
+  "voice": "en-GB-RyanNeural",
+  "rate": "+12%",
+  "scenes": [
+    {
+      "id": "title",
+      "title": "FEMM Agent Suite",
+      "minSeconds": 6,
+      "lines": [
+        "FEMM Agent Suite.",
+        "AI agents that drive FEMM 5, and prove the answers are right."
+      ]
+    },
+    {
+      "id": "problem",
+      "title": "The problem",
+      "minSeconds": 12,
+      "lines": [
+        "Finite element tools were built for clicks.",
+        "FEMM 5 runs headless on every desktop platform and takes scripts over TCP.",
+        "But an agent still needs a validated layer: one that catches mistakes, checks the physics, and records what it did."
+      ]
+    },
+    {
+      "id": "architecture",
+      "title": "Architecture",
+      "minSeconds": 15,
+      "lines": [
+        "The suite is an MCP server.",
+        "It launches headless FEMM instances and speaks their TCP protocol directly.",
+        {
+          "say": "Eighty-eight tools in twelve groups, from geometry and materials to experiments, health checks and reports.",
+          "show": "88 tools in 12 groups, from geometry and materials to experiments, health checks and reports."
+        }
+      ]
+    },
+    {
+      "id": "demo",
+      "title": "An agent at work",
+      "minSeconds": 20,
+      "lines": [
+        {
+          "say": "Ask for a twelve-slot, four-pole surface magnet motor.",
+          "show": "Ask for a 12-slot, 4-pole surface magnet motor."
+        },
+        "The agent builds it, solves in a fraction of a second, and runs cogging two independent ways.",
+        {
+          "say": "Then it proves the torque: one point four one five newton metres simulated, against one point four two eight from the d q formula.",
+          "show": "Then it proves the torque: 1.415 N·m simulated, against 1.428 N·m from the dq formula."
+        }
+      ]
+    },
+    {
+      "id": "validation",
+      "title": "Validated against theory",
+      "minSeconds": 15,
+      "lines": [
+        "Every claim is benchmarked against theory.",
+        {
+          "say": "The solenoid self-test is within point seven percent. Cogging methods agree to point three.",
+          "show": "The solenoid self-test is within 0.7 %. Cogging methods agree to 0.3 %."
+        },
+        {
+          "say": "A C resistance matches Bessel, and the electrostatic, thermal and current flow cases sit within one percent.",
+          "show": "AC resistance matches Bessel, and the electrostatic, thermal and current-flow cases sit within 1 %."
+        }
+      ]
+    },
+    {
+      "id": "skills",
+      "title": "Skills",
+      "minSeconds": 11,
+      "lines": [
+        "Eleven Claude skills are the operating manual, from a router to machine design and troubleshooting."
+      ]
+    },
+    {
+      "id": "install",
+      "title": "Install",
+      "minSeconds": 10,
+      "lines": [
+        "Install with one script, or as a Claude Code plugin.",
+        "Then just ask: run the FEMM self-test."
+      ]
+    },
+    {
+      "id": "closing",
+      "title": "Get it",
+      "minSeconds": 7,
+      "lines": [
+        "Open source on GitHub.",
+        {
+          "say": "FEMM 5 is by David Meeker, at femm dot info.",
+          "show": "FEMM 5 is by David Meeker, at femm.info."
+        }
+      ]
+    }
+  ]
+}

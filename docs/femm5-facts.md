@@ -411,7 +411,7 @@ experiments, health rules and file parser. Numbers come from `tests/test_experim
   (Br lm / (lm + mu_r kc g)); PM flux-linkage fundamental 47.6 mWb vs 51.0 mWb (flat-gap
   estimate); Ld 0.427 mH, Lq 0.421 mH; mutual inductances reciprocal to 0.4 %. Mean torque at
   iq = 10 A was 1.415 N*m against 1.428 N*m from 3/2 p (psi_d iq - psi_q id) with the FEM flux
-  linkages (0.2 %). At a single rotor position the dq formula is off by 12 % because the EMF has
+  linkages (0.9 %). At a single rotor position the dq formula is off by 12 % because the EMF has
   27 % THD. Magnet operating point B_m/Br 0.70, Pc 2.5.
 - Library materials used: `N42` is linear (no B-H points); `M-19 14 mil` is nonlinear with
   sigma 1.923 MS/m; `Copper` is 58 MS/m.
