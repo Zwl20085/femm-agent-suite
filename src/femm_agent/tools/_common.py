@@ -128,6 +128,8 @@ def hint_for(err: Exception, session: Session | None = None) -> str:
         return "Check the command name with femm_api_search."
     if "input in focus" in low or "output in focus" in low:
         return "That document was closed. Call femm_new_document or femm_open (pre-processor) or femm_solve/femm_load_solution (post-processor)."
+    if "no results file" in low:
+        return "This model has no solution file yet. Call femm_solve."
     if "must be saved" in low:
         return "Save first with femm_save(path) (femm_solve and femm_create_mesh save automatically)."
     if "no contour" in low:
@@ -136,6 +138,9 @@ def hint_for(err: Exception, session: Session | None = None) -> str:
         return "Call femm_new_document(physics=...) or femm_open(path) first."
     if "could not open" in low or "no such file" in low or "cannot open" in low:
         return "Check the path (use forward slashes, absolute paths) and that the file was saved with femm_save."
+    if "no material assigned" in low:
+        return ("A closed region has no block label. Add one with femm_add_block_label (use material '<No Mesh>' "
+                "for holes and for the annulus of an air-gap element); femm_geometry_summary lists label counts.")
     if "mesh" in low or "triang" in low or "tangle" in low:
         return "Meshing failed: look for overlapping segments, unclosed regions or labels outside regions (femm_geometry_summary helps)."
     if "did not answer" in low or "timeout" in low:

@@ -53,8 +53,10 @@ class Catalog:
         cmds: dict[str, dict[str, Any]] = {}
         alias: dict[str, str] = {}
         if not p.is_file():
-            self.warning = f"command catalog not found at {p}; search/validation unavailable"
-            warnings.warn(self.warning)
+            msg = f"command catalog not found at {p}; search/validation unavailable"
+            if self.warning != msg:
+                warnings.warn(msg)
+            self.warning = msg
             self._commands = {}
             return self._commands      # re-checked on the next call (the file may land later)
         try:

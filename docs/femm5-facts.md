@@ -255,3 +255,82 @@ specifications (`docs/*-file-formats.pdf`, text versions of each `*-fmt` note) d
 - Headless behaviour of GUI-only view commands (`xo_zoom`, `xo_showdensityplot`, `main_*`): registered, but
   their effect without a window was not tested.
 - 3-5x speed-up claim and "material renames" are unverified (see section 5).
+
+## Verified by the core-server build
+
+All items below were observed live on `FEMM headless engine v5.0 06Oct2026` (Windows 11) while
+building and testing the core tool groups (`tests/live/`). Tags as above: everything here is **[live]**.
+
+**Scripting and processes**
+
+- `exec(open("<abs path>.py").read())` works as one request: multi-line MicroPython runs inside the
+  engine, sees all `mi_*`/`mo_*` commands as globals, and its variables persist for later requests.
+  `open()` with one argument naming a `.py` file is Python's `open`; naming a FEMM document it opens
+  the document. `print()` output of in-process code goes to the engine's stdout, not to the reply.
+- A Python list or tuple *value* comes back as its repr in a single field (`"[6, 4958.0]"`), not
+  tab-separated; the tools turn it back into data with `ast.literal_eval`.
+- `femm_headless --port N -run script.py a b` runs the script with `sys.argv == [script, 'a', 'b']`
+  and exits: code 0 on success, 1 on any script error (stderr: `Script error: <message>`). Without
+  `--port` it still listens on 48015 while running, so pass a free port when sessions are open.
+  `print(a, b)` separates with a tab.
+- `femm-lua.bat -h -p PORT script.lua` (bin folder) runs an unchanged FEMM 4.2 Lua 4 script against a
+  fresh headless engine, prints to stdout, returns exit code 0, and leaves no process behind.
+- The bundled pyFEMM (`<install>/pyfemm/femm.py`) finds the engine only through `FEMM_DIR`; it does
+  not search the default install folders (`RuntimeError: Cannot find femm_headlessw executable`).
+- Launch of `femm_headlessw --port N` to first reply: ~0.5 s.
+
+**Problem info, meshing, solving**
+
+- `mi_getprobleminfo()` returns `[type (0 planar, 1 axi), frequency Hz, depth in problem units,
+  length unit in m]`, e.g. `[0, 0, 100, 0.001]`; `mo_getprobleminfo()` gives the same but depth in
+  metres (`0.1`). `ei_/hi_getprobleminfo()` and `ci_getprobleminfo()` return three values
+  `[type, depth, length unit in m]`: the current-flow one has no frequency field.
+- `mi_getboundingbox()` returns `[x_min, x_max, y_min, y_max]` (nothing for an empty model).
+- `mi_createmesh()` on an unsaved model fails with `File must be saved before creating mesh`; after a
+  save it returns nothing (no element count). Counts come from `mo_numnodes/mo_numelements` after a solve.
+- A region without a block label stops the solver: `Solver failed: a region has no material assigned
+  ... (exit code 10)`. `mi_loadsolution()` without a solution: `No results file: <path>.ans`.
+- After `mi_close()` any `mi_*` call fails with `No current magnetics input in focus`.
+- Speed: thick-solenoid self-test, 8914 elements, axisymmetric magnetostatic: 0.06-0.1 s solve.
+
+**Post-processing**
+
+- `mo_getpointvalues` reports `Je` and `Js` in **MA/m^2** (a 500-turn, 1 A coil of 200 mm^2 gives
+  `2.5`). It returns an empty reply for a point outside the mesh (also inside an air-gap annulus).
+- `mo_getallelements()` returns 7 values per element `n1, n2, n3, cx, cy, area, group` with
+  **1-based** node indices; `mo_getallb()` 2 values per element; `mo_getallnodes()` 2 per node.
+- pyFEMM helpers such as `mo_getb` are not engine commands: over the wire `name 'mo_getb' isn't defined`.
+- `mo_blockintegral(2)` returns one value; `eo_blockintegral(0)` (stored energy) returns two values `[W, 0]`.
+- `xo_makeplot(type, npts, file, 0)` works headless, writes a text file with a header line
+  (`Position, |B|`) and `x, y` rows, and returns `npts`. Without a contour: `No contour defined for makeplot`.
+- `mi_modifymaterial` propnum 1 = mu_x, 5 = sigma, 8 = lamination fill (checked in the saved `.fem`).
+- `mi_selectlabel/selectnode` return the picked coordinates; `mi_selectsegment/selectarcsegment`
+  return `[x1, y1, x2, y2]` of the picked edge.
+
+**Air-gap element (sliding band)**
+
+- `mi_addboundprop(name, 0,0,0,0,0,0,0,0, 6, inner_angle, outer_angle)` (12 args) assigned to both
+  concentric arcs works, but the annulus needs a `<No Mesh>` block label (otherwise the solver error
+  above). `mo_getgapb`, `mo_gapintegral`, `mo_getallgapb` and `mo_getallgapharmonics` then work:
+  2-pole N42 rotor, 1 mm gap, iron stator: Br = 1.217 T at 0 deg, torque ~6e-6 N m.
+- `mo_getallgapharmonics` row index = harmonic number (row 1 carried the 1.2165 T fundamental).
+- An unknown air-gap boundary name is **not** an error: every gap command returns zeros.
+
+**Screenshots**
+
+- `mi_savebitmap` / `mo_savebitmap` return success in the headless engine but write **no file**. In
+  `femm_gui` (`femm_session_open(headless=False)`) they write PNG (1994x1330 RGBA) or BMP.
+  `mo_savemetafile` writes nothing in either.
+- After `mi_loadsolution` the post-processor window has the focus: `mi_savebitmap` captures the
+  solution plot until `mi_setfocus("<document stem>")` is called.
+- `mo_showdensityplot(1, 0, 0, 0, "bmag")` draws a legend that reads 0 everywhere; legend `-1`
+  (FEMM defaults) auto-scales correctly and adds flux lines.
+
+**Accuracy spot checks (tests/live/test_live_core.py)**
+
+- Thick solenoid centre field: 0.695 % above the analytic value (mi_makeABC open boundary).
+- Parallel-plate capacitor (eps_r 4): conductor charge and `eo_blockintegral(0)` energy within 1 %.
+- Heat-flow slab and current-flow strip: |F| and |J| within 1 % of k dT/L and sigma V/L.
+
+Resolves from section 9: the `ei_/hi_/ci_getprobleminfo` layout, three `mi_modifymaterial` indices,
+and the `xo_makeplot` return value.

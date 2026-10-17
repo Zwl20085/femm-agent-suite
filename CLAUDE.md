@@ -27,7 +27,7 @@ FEMM 5 is found via `FEMM_DIR` (bin folder) or the default install locations
 ## Architecture
 
 ```
-MCP client --stdio--> server.py (FastMCP, Python >= 3.10)
+MCP client --stdio--> server.py (mcp>=2 MCPServer, falls back to mcp 1.x FastMCP; Python >= 3.10)
                         |-- sessions.py   named FEMM instances (port, pid, physics, open doc, cwd)
                         |     `-- ipc.py  FemmLink: TCP newline protocol, launch/connect, timeouts, journal
                         |-- catalog.py    loads data/commands.json (every FEMM command, args, docs)
@@ -42,6 +42,17 @@ MCP client --stdio--> server.py (FastMCP, Python >= 3.10)
                         |-- plotting.py / reporting.py  post-processing (pure, optional matplotlib)
                         `-- units.py / estimate.py      analytic layer (pure)
 ```
+
+`server.build_server()` creates the server and a `ToolContext` (`tools/_common.py`), then imports
+each group in `CORE_GROUPS` (failure is fatal) and `ENGINEERING_GROUPS` (missing or broken modules
+are skipped and listed in `ctx.extras["skipped_groups"]`, shown by `femm_status`). Groups receive a
+thin wrapper of the server whose `@mcp.tool()` also records the plain function in
+`ctx.extras["tools"]` (name -> callable) and `ctx.extras["groups"]`; tests call tools through that
+registry. Tool bodies use `run_tool(ctx, session, fn, need=None|"document"|"solution")`, which opens
+the session lazily *inside* the envelope (so "FEMM not installed" is an `ok: false` reply), checks
+document/solution state, and raises `ToolInputError(message, hint)` for bad input. Every FEMM line a
+session sends is in `FemmLink.journal` (refused ones prefixed `#! `); `femm_journal` and
+`femm_export_pyfemm_script` turn it into replayable scripts.
 
 ### Hard facts behind this design (verified live on build 06oct2026)
 

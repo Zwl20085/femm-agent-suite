@@ -190,6 +190,8 @@ class FemmLink:
         reply = buf[: buf.index(b"\n")].decode("utf-8", errors="replace").rstrip("\r")
         if reply.startswith("error:"):
             self.stats["errors"] += 1
+            if self.journal and self.journal[-1] == line:   # mark refused commands (replay skips them)
+                self.journal[-1] = f"#! {line}  # FEMM error: {reply[6:].strip()[:120]}"
             raise FemmError(reply[6:].strip(), command=line)
         if not expect_reply:
             return None

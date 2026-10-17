@@ -240,7 +240,7 @@ class MaterialLibrary:
                     if len(q) > 3 and q in f:
                         s += 20
                     s += 25 * difflib.SequenceMatcher(None, q, n).ratio()
-                    if s < 12:
+                    if s < 9:
                         continue
                 scored.append((s, m))
         scored.sort(key=lambda x: (-x[0], x[1]["name"]))

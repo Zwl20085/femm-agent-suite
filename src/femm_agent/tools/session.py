@@ -89,11 +89,10 @@ def run_selftest(ctx: ToolContext, session: str = "selftest", keep: bool = False
               tolerance_pct=tolerance_pct)
         ne = s.call("mo_numelements")
         check("solve_timing", solve_s < 30, seconds=round(solve_s, 3), elements=ne)
-        js = pv[8]
-        j_expected = turns * cur / ((b - a) * length * 1e-6)   # A/m^2
+        j_expected = turns * cur / ((b - a) * length * 1e-6) / 1e6   # MA/m^2 (FEMM reports J in MA/m^2)
         pvc = s.call("mo_getpointvalues", (a + b) / 2, 0)
         check("current_density_units", abs(abs(pvc[8]) - j_expected) / j_expected < 0.01,
-              Js_reported=pvc[8], J_expected_A_per_m2=j_expected, Js_at_axis=js)
+              Js_reported=pvc[8], J_expected_MA_per_m2=j_expected)
         allb = s.call("mo_getallb")
         alle = s.call("mo_getallelements")
         check("bulk_getters", isinstance(allb, list) and len(allb) == 2 * ne and len(alle) == 7 * ne,
@@ -160,12 +159,12 @@ def register(mcp, ctx: ToolContext) -> None:
         def run():
             s = ctx.sessions.open(name, headless=headless, port=port, work_dir=work_dir, attach=attach)
             return s.info()
-        return envelope(run, None, session=name)
+        return {**envelope(run), "session": name}
 
     @mcp.tool()
     def femm_session_close(name: str = "main") -> dict:
         """Quit the FEMM engine of session `name` (unsaved work is lost: call femm_save first)."""
-        return envelope(lambda: {"closed": ctx.sessions.close(name)}, None, session=name)
+        return {**envelope(lambda: {"closed": ctx.sessions.close(name)}), "session": name}
 
     @mcp.tool()
     def femm_session_list() -> dict:
@@ -180,4 +179,4 @@ def register(mcp, ctx: ToolContext) -> None:
         B0 = mu0*J*l*ln[(b+sqrt(b^2+l^2))/(a+sqrt(a^2+l^2))] (expect < 1 % error). Also checks
         library material loading, the error path for a FEMM 4.2 name, current-density units,
         bulk getters, circuit results and timing. Returns pass/fail per check."""
-        return envelope(lambda: run_selftest(ctx, "selftest", keep_session, tolerance_pct), None, session="selftest")
+        return {**envelope(lambda: run_selftest(ctx, "selftest", keep_session, tolerance_pct)), "session": "selftest"}

@@ -59,10 +59,14 @@ def energy_consistency(energy: float, flux_linkages: Sequence[float], currents: 
     return _check(name, ok, energy, w_circ, tolerance, msg)
 
 
-def energy_coenergy_linear(energy: float, coenergy: float, linear: bool = True, tolerance: float = 0.02) -> dict:
+def energy_coenergy_linear(energy: float, coenergy: float, linear: bool = True, tolerance: float = 0.02,
+                           has_magnets: bool = False) -> dict:
     """For a linear problem without magnets the energy W and coenergy W' (codes 2 and 17) are equal.
-    A big gap in a 'linear' model means something is saturating (a nonlinear B-H curve is active)."""
+    A big gap in a 'linear' model means something is saturating (a nonlinear B-H curve is active).
+    With permanent magnets W and W' differ by the magnet terms, so the rule does not apply."""
     name = "energy_equals_coenergy"
+    if has_magnets:
+        return not_applicable(name, f"permanent magnets present (W = {energy:.6g} J, W' = {coenergy:.6g} J differ by magnet terms)")
     if not linear:
         if coenergy < energy * 0.999 and energy > 0:
             return _check(name, False, coenergy, f">= {energy:.6g}", None,
@@ -185,12 +189,17 @@ def solver_precision(precision: float, max_precision: float = 1e-6) -> dict:
 # ----------------------------------------------------------------------------- boundary
 
 def boundary_distance(b_boundary_max: float, b_max: float, max_ratio: float = 0.02,
-                      has_open_boundary: bool = False, flux_contained: bool = False) -> dict:
+                      has_open_boundary: bool = False, flux_contained: bool = False, abc_shells: bool = False) -> dict:
     """Field at the outer boundary relative to the peak field. With a Dirichlet A = 0 box the
     outer edge should see < ~2 % of the peak |B|; otherwise the box is too small (or use
     ``mi_makeABC`` for an open boundary). Machines whose flux is contained by back iron
-    (``flux_contained``) are exempt."""
+    (``flux_contained``) and ``mi_makeABC`` open boundaries (``abc_shells``) are exempt."""
     name = "outer_boundary_far_enough"
+    if abc_shells:
+        ratio = b_boundary_max / b_max if b_max else None
+        return _check(name, True, ratio, None, None,
+                      "open boundary emulated by mi_makeABC shells (rule waived: the field inside the graded shells is "
+                      "not physical); make sure the shells start >= 2-3x the device size from it")
     if flux_contained:
         return _check(name, True, None, None, None, "flux contained by an iron yoke at the outer boundary (rule waived)")
     if b_max <= 0:

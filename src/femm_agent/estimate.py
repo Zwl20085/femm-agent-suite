@@ -29,6 +29,14 @@ def solenoid_b_axis_finite(turns: float, current: float, length: float, radius: 
     return MU0 * turns * current / (2.0 * length) * (a / math.hypot(a, radius) - b / math.hypot(b, radius))
 
 
+def thick_solenoid_b_center(current_density: float, r_inner: float, r_outer: float, length: float) -> float:
+    """B at the centre of a thick solenoid with uniform current density J (A/m^2):
+    B0 = mu0 J (L/2) ln[(a + sqrt(a^2 + b^2)) / (1 + sqrt(1 + b^2))],  a = r2/r1, b = L/(2 r1)."""
+    a = r_outer / r_inner
+    b = length / (2.0 * r_inner)
+    return MU0 * current_density * (length / 2.0) * math.log((a + math.hypot(a, b)) / (1.0 + math.hypot(1.0, b)))
+
+
 def loop_b_axis(current: float, radius: float, z: float = 0.0, turns: float = 1.0) -> float:
     """B on the axis of a circular loop: B(z) = mu0 N I R^2 / (2 (R^2 + z^2)^(3/2))."""
     return MU0 * turns * current * radius ** 2 / (2.0 * (radius ** 2 + z ** 2) ** 1.5)
@@ -249,6 +257,7 @@ def harmonics(samples: Sequence[float], period_samples: int | None = None) -> di
 ESTIMATES = {
     "solenoid_b_infinite": solenoid_b_infinite,
     "solenoid_b_axis_finite": solenoid_b_axis_finite,
+    "thick_solenoid_b_center": thick_solenoid_b_center,
     "loop_b_axis": loop_b_axis,
     "solenoid_inductance_long": solenoid_inductance_long,
     "wire_inductance_per_length": wire_inductance_per_length,
