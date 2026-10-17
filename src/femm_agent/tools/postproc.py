@@ -239,7 +239,7 @@ def register(mcp, ctx: ToolContext) -> None:
         """Field values at [[x, y], ...] (problem units), labelled for the physics, plus the
         magnitude (|B|, |E|, |F| or |J|). Components are x/y for planar and r/z for axisymmetric
         models. Magnetics keys: A, Bx/By (T), sigma (MS/m), energy_density (J/m^3), Hx/Hy (A/m),
-        J_eddy, J_source (MA/m^2, verified), mu1/mu2 (relative), P_ohmic, P_hyst (W/m^3), fill_factor.
+        J_eddy, J_source (MA/m^2, verified), mux/muy (relative), P_ohmic, P_hyst (W/m^3), fill_factor.
         Complex (AC) values come back as {"re", "im"} (peak). A point outside the model gives
         outside=true. Up to a few hundred points per call is fine (~1 ms each)."""
         def run(s: Session):

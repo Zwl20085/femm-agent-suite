@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-labelledby="t d">
+  <title id="t">FEMM Agent Suite</title>
+  <desc id="d">Banner: the project name, a tagline, and magnetic field lines looping around a bar magnet.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1220"/>
+      <stop offset="1" stop-color="#132238"/>
+    </linearGradient>
+    <linearGradient id="line" gradientUnits="userSpaceOnUse" x1="650" y1="0" x2="1200" y2="0">
+      <stop offset="0" stop-color="#4cc9f0"/>
+      <stop offset="1" stop-color="#7b9cff"/>
+    </linearGradient>
+    <linearGradient id="north" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#e76f51"/>
+      <stop offset="1" stop-color="#f4a261"/>
+    </linearGradient>
+    <linearGradient id="south" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2a9d8f"/>
+      <stop offset="1" stop-color="#43aa8b"/>
+    </linearGradient>
+    <pattern id="mesh" width="48" height="42" patternUnits="userSpaceOnUse">
+      <path d="M0 42 L24 0 L48 42 Z M24 0 L48 0 M0 0 L24 0" fill="none" stroke="#8fb3ff" stroke-width="0.6"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="300" fill="url(#bg)"/>
+  <rect x="640" y="0" width="560" height="300" fill="url(#mesh)" opacity="0.07"/>
+
+  <!-- field lines of a bar magnet centred at (930, 150): out of N (right), back into S (left) -->
+  <g fill="none" stroke="url(#line)" stroke-linecap="round">
+    <path d="M990 146 C1045 131 1015 108 930 108 S815 131 870 146" stroke-width="2.0" opacity="0.95"/>
+    <path d="M990 154 C1045 169 1015 192 930 192 S815 169 870 154" stroke-width="2.0" opacity="0.95"/>
+    <path d="M990 146 C1085 119 1065 72 930 72 S775 119 870 146" stroke-width="1.8" opacity="0.8"/>
+    <path d="M990 154 C1085 181 1065 228 930 228 S775 181 870 154" stroke-width="1.8" opacity="0.8"/>
+    <path d="M990 146 C1130 105 1120 34 930 34 S730 105 870 146" stroke-width="1.6" opacity="0.62"/>
+    <path d="M990 154 C1130 195 1120 266 930 266 S730 195 870 154" stroke-width="1.6" opacity="0.62"/>
+    <path d="M990 146 C1180 91 1180 -6 930 -6 S680 91 870 146" stroke-width="1.4" opacity="0.45"/>
+    <path d="M990 154 C1180 209 1180 306 930 306 S680 209 870 154" stroke-width="1.4" opacity="0.45"/>
+    <path d="M990 150 L1200 150" stroke-width="1.4" opacity="0.55"/>
+    <path d="M870 150 L680 150" stroke-width="1.4" opacity="0.55"/>
+  </g>
+
+  <!-- magnet -->
+  <g>
+    <rect x="870" y="132" width="60" height="36" rx="3" fill="url(#south)"/>
+    <rect x="930" y="132" width="60" height="36" rx="3" fill="url(#north)"/>
+    <text x="900" y="156" text-anchor="middle" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="18" font-weight="700" fill="#0b1220">S</text>
+    <text x="960" y="156" text-anchor="middle" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="18" font-weight="700" fill="#0b1220">N</text>
+  </g>
+
+  <!-- text -->
+  <g font-family="Segoe UI, Helvetica Neue, Arial, sans-serif">
+    <text x="64" y="132" font-size="62" font-weight="700" fill="#f1f5ff">FEMM Agent Suite</text>
+    <text x="66" y="178" font-size="22" fill="#b9c8e6">MCP server, physics checks and Claude skills for FEMM 5</text>
+    <text x="66" y="208" font-size="22" fill="#b9c8e6">finite element analysis, with proof that the answer is physics</text>
+    <text x="66" y="252" font-size="15" letter-spacing="2" fill="#4cc9f0">MAGNETICS  ·  ELECTROSTATICS  ·  HEAT FLOW  ·  CURRENT FLOW</text>
+  </g>
+</svg>

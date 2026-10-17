@@ -362,7 +362,7 @@ experiments, health rules and file parser. Numbers come from `tests/test_experim
   answer `name 'mo_getb' isn't defined`. Use `mo_getpointvalues`.
 - `mi_createmesh()` returns nothing over IPC (not the element count); use `mo_numelements` after a solve.
 - `mo_groupselectblock(n)` calls accumulate (several groups can be selected before one
-  `mo_blockintegral`); `mi_selectgroup(n)` clears the previous selection.
+  `mo_blockintegral`); `mi_selectgroup(n)` clears the previous selection (the catalog summary records it as additive; the two observations conflict and have not been reconciled, so `femm_select` always clears first).
 - `mo_close()` after each step of a sweep is accepted and the next `mi_analyze` +
   `mi_loadsolution` work normally. `mi_close()` followed by `opendocument(path)` works headless.
 - A multi-line MicroPython snippet runs per case via `exec(open("<path>").read())`.
