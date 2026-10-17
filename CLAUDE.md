@@ -72,7 +72,12 @@ MCP client --stdio--> server.py (FastMCP, Python >= 3.10)
 - **Speed.** A 10k-element magnetostatic solve takes ~0.25 s, launch ~0.5 s. Timeouts: default
   600 s per call, solve calls take an explicit `timeout`.
 - **Lengths** are in problem units (`mi_probdef` units argument), angles in degrees,
-  frequency in Hz; `mi_probdef(freq, units, type, precision, depth, minangle, acsolver)`.
+  frequency in Hz; `mi_probdef(freq, units, type, precision, depth, minangle, acsolver)`;
+  `ci_probdef` puts frequency third, `ei_/hi_probdef` have none. `mi_addboundprop` takes 12
+  positional args (name + 11; `ia`, `oa` optional), `mi_addmaterial` 14 (name + 13),
+  `mi_setblockprop` 7 but the ei/hi/ci versions 4. `mi_analyze` needs the model saved first.
+  Complex replies look like `1+I*2`; a second TCP client is rejected; the engine exits when
+  its client disconnects. All of this is in `data/commands.json` / `data/commands_summary.md`.
 - **`mo_getpointvalues(x,y)`** returns 14 values: A, B1, B2, Sig, E, H1, H2, Je, Js, Mu1, Mu2,
   Pe, Ph, ff (see manual 3.7). `mo_blockintegral(k)` integer codes are in `data/commands.json`.
 

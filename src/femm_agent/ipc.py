@@ -27,7 +27,7 @@ from .config import FemmInstall, find_femm
 
 DEFAULT_PORT = 48015
 _NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
-_COMPLEX_RE = re.compile(r"^[+-]?(?:\d+\.?\d*(?:[eE][+-]?\d+)?)?(?:[+-]\d*\.?\d*(?:[eE][+-]?\d+)?)?[Ii]$")
+_COMPLEX_RE = re.compile(r"^[0-9eE.+\-*Ii ]+$")  # e.g. 1+I*2, I*2.5, -I*3, 1.5+2I
 
 
 class FemmError(Exception):
@@ -84,10 +84,15 @@ def _parse_scalar(p: str) -> Any:
         return float(s)
     except ValueError:
         pass
-    if _COMPLEX_RE.match(s) and any(ch.isdigit() for ch in s):
+    # FEMM writes complex numbers as 1+I*2, I*2.5, -I*3 (older bindings also accept 1.5+2I)
+    if ("I" in s or "i" in s) and _COMPLEX_RE.match(s) and any(ch.isdigit() for ch in s):
+        expr = re.sub(r"(\d)\s*[Ii]\b", r"\1*1j", s)      # 2I -> 2*1j
+        expr = re.sub(r"[Ii]", "1j", expr)                  # I*2 -> 1j*2
         try:
-            return complex(s[:-1].replace(" ", "") + "j") if s[-2:-1] not in "+-" or len(s) > 1 else complex(0, 1)
-        except ValueError:
+            v = eval(expr, {"__builtins__": {}}, {})  # charset is restricted by _COMPLEX_RE
+            if isinstance(v, (int, float, complex)):
+                return complex(v)
+        except Exception:
             pass
     low = s.lower()
     if low in ("true", "false"):

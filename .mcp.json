@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "femm": {
+      "command": "uvx",
+      "args": ["--from", "${CLAUDE_PLUGIN_ROOT}", "femm-mcp"],
+      "env": { "FEMM_DIR": "${user_config.FEMM_DIR}" }
+    }
+  }
+}

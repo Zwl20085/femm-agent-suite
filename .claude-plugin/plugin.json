@@ -1,0 +1,20 @@
+{
+  "name": "femm",
+  "displayName": "FEMM Agent Suite",
+  "description": "Drive FEMM 5 from Claude: MCP server, physics health checks, standard experiments and skills for 2D magnetic, electrostatic, thermal and current-flow FEA.",
+  "version": "0.1.0",
+  "author": { "name": "Zwl20085" },
+  "homepage": "https://github.com/Zwl20085/femm-agent-suite",
+  "repository": "https://github.com/Zwl20085/femm-agent-suite",
+  "license": "MIT",
+  "keywords": ["femm", "fea", "magnetics", "electric-machines", "mcp", "simulation"],
+  "skills": "./.claude/skills",
+  "userConfig": {
+    "FEMM_DIR": {
+      "type": "directory",
+      "title": "FEMM 5 bin folder",
+      "description": "Folder holding femm_headless / femm_gui (e.g. C:/femm-qt/bin). Leave empty to auto-detect.",
+      "required": false
+    }
+  }
+}

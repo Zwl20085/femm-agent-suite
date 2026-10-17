@@ -1,0 +1,12 @@
+{
+  "name": "femm-agent-suite",
+  "description": "FEMM 5 agent toolkit for Claude Code",
+  "owner": { "name": "Zwl20085" },
+  "plugins": [
+    {
+      "name": "femm",
+      "source": "./",
+      "description": "MCP server, physics health checks, experiments and skills that let Claude drive FEMM 5 finite element analysis."
+    }
+  ]
+}

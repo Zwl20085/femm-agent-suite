@@ -38,6 +38,12 @@ def test_parse_reply():
     assert isinstance(z, complex) and z.real == 1.5 and z.imag == 2
     z = parse_reply("-3i")
     assert isinstance(z, complex) and z.imag == -3
+    assert parse_reply("1+I*2") == 1 + 2j
+    assert parse_reply("I*2.5") == 2.5j
+    assert parse_reply("-I*3") == -3j
+    assert parse_reply("0.5-I*0.25") == 0.5 - 0.25j
+    assert parse_reply("inches") == "inches"
+    assert parse_reply("C:/dir/file.fem") == "C:/dir/file.fem"
 
 
 class FakeFemm:
