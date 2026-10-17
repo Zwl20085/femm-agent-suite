@@ -25,3 +25,7 @@ work/
 # Video build artefacts
 video/node_modules/
 video/out/
+
+# agent scratch work dirs
+/w*/
+/tmp*/
