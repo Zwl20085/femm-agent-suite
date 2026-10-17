@@ -62,7 +62,7 @@ session sends is in `FemmLink.journal` (refused ones prefixed `#! `); `femm_jour
   implements it directly (no pyFEMM import needed). `femm_headlessw.exe --port N` (Windows,
   no console) / `femm_headless --port N` is spawned per session; several instances run on
   different ports. The engine exits when it receives `quit()`.
-- **Errors are explicit.** Unlike JMAG, FEMM raises: a bad material name answers
+- **Errors are explicit.** Unlike most commercial FEA APIs, FEMM raises: a bad material name answers
   `error:Couldn't load "X" from the materials library`. `FemmError` carries the message and the
   command. Tools must convert it to `{"ok": false, "error": {"message", "hint"}}`.
 - **Commands only exist once a document exists.** `newdocument`/`opendocument` are always
