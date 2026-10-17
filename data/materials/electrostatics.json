@@ -1,0 +1,691 @@
+{
+ "library": "statlib.dat",
+ "physics": "electrostatics",
+ "source": "C:/femm-qt/bin/statlib.dat",
+ "count": 95,
+ "folders": [
+  "Gases (20 C, 1 atm)",
+  "Liquids",
+  "Liquids / Water (high-frequency limit; DC: use current flow)",
+  "Liquids / Polar Organic Liquids (high-frequency limit)",
+  "Liquids / Low-Permittivity Organic Liquids",
+  "Liquids / Insulating Oils",
+  "Solid Insulation",
+  "Solid Insulation / Ceramics, Glass and Stone",
+  "Solid Insulation / Polymers",
+  "Solid Insulation / Thin-Film Dielectrics",
+  "Circuit Board Laminates",
+  "Semiconductors"
+ ],
+ "folder_count": 12,
+ "unparsed_lines": [],
+ "point_count_mismatches": [],
+ "duplicate_names": [],
+ "materials": [
+  {
+   "name": "Vacuum",
+   "ex": 1,
+   "ey": 1,
+   "qv": 0,
+   "folder": null
+  },
+  {
+   "name": "Helium",
+   "ex": 1.000065,
+   "ey": 1.000065,
+   "qv": 0,
+   "folder": "Gases (20 C, 1 atm)"
+  },
+  {
+   "name": "Hydrogen",
+   "ex": 1.0002538,
+   "ey": 1.0002538,
+   "qv": 0,
+   "folder": "Gases (20 C, 1 atm)"
+  },
+  {
+   "name": "Oxygen",
+   "ex": 1.0004947,
+   "ey": 1.0004947,
+   "qv": 0,
+   "folder": "Gases (20 C, 1 atm)"
+  },
+  {
+   "name": "Argon",
+   "ex": 1.0005172,
+   "ey": 1.0005172,
+   "qv": 0,
+   "folder": "Gases (20 C, 1 atm)"
+  },
+  {
+   "name": "Air (dry, CO2-free)",
+   "ex": 1.0005364,
+   "ey": 1.0005364,
+   "qv": 0,
+   "folder": "Gases (20 C, 1 atm)"
+  },
+  {
+   "name": "Nitrogen",
+   "ex": 1.000548,
+   "ey": 1.000548,
+   "qv": 0,
+   "folder": "Gases (20 C, 1 atm)"
+  },
+  {
+   "name": "Carbon dioxide",
+   "ex": 1.000922,
+   "ey": 1.000922,
+   "qv": 0,
+   "folder": "Gases (20 C, 1 atm)"
+  },
+  {
+   "name": "Water, 20 C",
+   "ex": 80.37,
+   "ey": 80.37,
+   "qv": 0,
+   "folder": "Liquids / Water (high-frequency limit; DC: use current flow)"
+  },
+  {
+   "name": "Water, 25 C",
+   "ex": 78.54,
+   "ey": 78.54,
+   "qv": 0,
+   "folder": "Liquids / Water (high-frequency limit; DC: use current flow)"
+  },
+  {
+   "name": "Water, 50 C",
+   "ex": 70,
+   "ey": 70,
+   "qv": 0,
+   "folder": "Liquids / Water (high-frequency limit; DC: use current flow)"
+  },
+  {
+   "name": "Methanol",
+   "ex": 33.62,
+   "ey": 33.62,
+   "qv": 0,
+   "folder": "Liquids / Polar Organic Liquids (high-frequency limit)"
+  },
+  {
+   "name": "Ethanol",
+   "ex": 24.3,
+   "ey": 24.3,
+   "qv": 0,
+   "folder": "Liquids / Polar Organic Liquids (high-frequency limit)"
+  },
+  {
+   "name": "1-Propanol",
+   "ex": 20.1,
+   "ey": 20.1,
+   "qv": 0,
+   "folder": "Liquids / Polar Organic Liquids (high-frequency limit)"
+  },
+  {
+   "name": "2-Propanol",
+   "ex": 18.3,
+   "ey": 18.3,
+   "qv": 0,
+   "folder": "Liquids / Polar Organic Liquids (high-frequency limit)"
+  },
+  {
+   "name": "Glycerol",
+   "ex": 42.5,
+   "ey": 42.5,
+   "qv": 0,
+   "folder": "Liquids / Polar Organic Liquids (high-frequency limit)"
+  },
+  {
+   "name": "Acetone",
+   "ex": 20.7,
+   "ey": 20.7,
+   "qv": 0,
+   "folder": "Liquids / Polar Organic Liquids (high-frequency limit)"
+  },
+  {
+   "name": "Formamide",
+   "ex": 109,
+   "ey": 109,
+   "qv": 0,
+   "folder": "Liquids / Polar Organic Liquids (high-frequency limit)"
+  },
+  {
+   "name": "1,2-Dichloroethane",
+   "ex": 10.65,
+   "ey": 10.65,
+   "qv": 0,
+   "folder": "Liquids / Polar Organic Liquids (high-frequency limit)"
+  },
+  {
+   "name": "Nitrobenzene",
+   "ex": 35.74,
+   "ey": 35.74,
+   "qv": 0,
+   "folder": "Liquids / Polar Organic Liquids (high-frequency limit)"
+  },
+  {
+   "name": "Diethyl ether",
+   "ex": 4.335,
+   "ey": 4.335,
+   "qv": 0,
+   "folder": "Liquids / Low-Permittivity Organic Liquids"
+  },
+  {
+   "name": "Benzene",
+   "ex": 2.2811,
+   "ey": 2.2811,
+   "qv": 0,
+   "folder": "Liquids / Low-Permittivity Organic Liquids"
+  },
+  {
+   "name": "Toluene",
+   "ex": 2.379,
+   "ey": 2.379,
+   "qv": 0,
+   "folder": "Liquids / Low-Permittivity Organic Liquids"
+  },
+  {
+   "name": "Hexane",
+   "ex": 1.89,
+   "ey": 1.89,
+   "qv": 0,
+   "folder": "Liquids / Low-Permittivity Organic Liquids"
+  },
+  {
+   "name": "Cyclohexane",
+   "ex": 2.023,
+   "ey": 2.023,
+   "qv": 0,
+   "folder": "Liquids / Low-Permittivity Organic Liquids"
+  },
+  {
+   "name": "Carbon tetrachloride",
+   "ex": 2.238,
+   "ey": 2.238,
+   "qv": 0,
+   "folder": "Liquids / Low-Permittivity Organic Liquids"
+  },
+  {
+   "name": "Chlorobenzene",
+   "ex": 5.708,
+   "ey": 5.708,
+   "qv": 0,
+   "folder": "Liquids / Low-Permittivity Organic Liquids"
+  },
+  {
+   "name": "Capacitor oil",
+   "ex": 2.2,
+   "ey": 2.2,
+   "qv": 0,
+   "folder": "Liquids / Insulating Oils"
+  },
+  {
+   "name": "Pipe cable oil",
+   "ex": 2.15,
+   "ey": 2.15,
+   "qv": 0,
+   "folder": "Liquids / Insulating Oils"
+  },
+  {
+   "name": "Self-contained cable oil",
+   "ex": 2.3,
+   "ey": 2.3,
+   "qv": 0,
+   "folder": "Liquids / Insulating Oils"
+  },
+  {
+   "name": "Heavy cable oil",
+   "ex": 2.23,
+   "ey": 2.23,
+   "qv": 0,
+   "folder": "Liquids / Insulating Oils"
+  },
+  {
+   "name": "Transformer oil",
+   "ex": 2.25,
+   "ey": 2.25,
+   "qv": 0,
+   "folder": "Liquids / Insulating Oils"
+  },
+  {
+   "name": "Alkyl benzene",
+   "ex": 2.1,
+   "ey": 2.1,
+   "qv": 0,
+   "folder": "Liquids / Insulating Oils"
+  },
+  {
+   "name": "Polybutene pipe cable oil",
+   "ex": 2.14,
+   "ey": 2.14,
+   "qv": 0,
+   "folder": "Liquids / Insulating Oils"
+  },
+  {
+   "name": "Polybutene capacitor oil",
+   "ex": 2.22,
+   "ey": 2.22,
+   "qv": 0,
+   "folder": "Liquids / Insulating Oils"
+  },
+  {
+   "name": "Silicone fluid",
+   "ex": 2.7,
+   "ey": 2.7,
+   "qv": 0,
+   "folder": "Liquids / Insulating Oils"
+  },
+  {
+   "name": "Castor oil",
+   "ex": 3.74,
+   "ey": 3.74,
+   "qv": 0,
+   "folder": "Liquids / Insulating Oils"
+  },
+  {
+   "name": "C8F16O fluorocarbon",
+   "ex": 1.86,
+   "ey": 1.86,
+   "qv": 0,
+   "folder": "Liquids / Insulating Oils"
+  },
+  {
+   "name": "Alumina (Al2O3)",
+   "ex": 8.5,
+   "ey": 8.5,
+   "qv": 0,
+   "folder": "Solid Insulation / Ceramics, Glass and Stone"
+  },
+  {
+   "name": "Porcelain (mullite)",
+   "ex": 8.2,
+   "ey": 8.2,
+   "qv": 0,
+   "folder": "Solid Insulation / Ceramics, Glass and Stone"
+  },
+  {
+   "name": "Steatite",
+   "ex": 5.5,
+   "ey": 5.5,
+   "qv": 0,
+   "folder": "Solid Insulation / Ceramics, Glass and Stone"
+  },
+  {
+   "name": "Magnesium oxide (MgO)",
+   "ex": 9.65,
+   "ey": 9.65,
+   "qv": 0,
+   "folder": "Solid Insulation / Ceramics, Glass and Stone"
+  },
+  {
+   "name": "Glass (soda lime)",
+   "ex": 6.25,
+   "ey": 6.25,
+   "qv": 0,
+   "folder": "Solid Insulation / Ceramics, Glass and Stone"
+  },
+  {
+   "name": "Mica",
+   "ex": 6.9,
+   "ey": 6.9,
+   "qv": 0,
+   "folder": "Solid Insulation / Ceramics, Glass and Stone"
+  },
+  {
+   "name": "Porcelain",
+   "ex": 6,
+   "ey": 6,
+   "qv": 0,
+   "folder": "Solid Insulation / Ceramics, Glass and Stone"
+  },
+  {
+   "name": "Fused silica",
+   "ex": 4,
+   "ey": 4,
+   "qv": 0,
+   "folder": "Solid Insulation / Ceramics, Glass and Stone"
+  },
+  {
+   "name": "Pyrex 7740 borosilicate glass",
+   "ex": 4.6,
+   "ey": 4.6,
+   "qv": 0,
+   "folder": "Solid Insulation / Ceramics, Glass and Stone"
+  },
+  {
+   "name": "Marble, dolomitic (USGS sample, New York)",
+   "ex": 7.7,
+   "ey": 7.7,
+   "qv": 0,
+   "folder": "Solid Insulation / Ceramics, Glass and Stone"
+  },
+  {
+   "name": "Marble, pink (USGS sample, Colorado)",
+   "ex": 11.7,
+   "ey": 11.7,
+   "qv": 0,
+   "folder": "Solid Insulation / Ceramics, Glass and Stone"
+  },
+  {
+   "name": "Polyethylene (LDPE)",
+   "ex": 2.3,
+   "ey": 2.3,
+   "qv": 0,
+   "folder": "Solid Insulation / Polymers"
+  },
+  {
+   "name": "Polyethylene (MDPE)",
+   "ex": 2.3,
+   "ey": 2.3,
+   "qv": 0,
+   "folder": "Solid Insulation / Polymers"
+  },
+  {
+   "name": "Polyethylene (HDPE)",
+   "ex": 2.35,
+   "ey": 2.35,
+   "qv": 0,
+   "folder": "Solid Insulation / Polymers"
+  },
+  {
+   "name": "Cross-linked polyethylene (XLPE)",
+   "ex": 2.3,
+   "ey": 2.3,
+   "qv": 0,
+   "folder": "Solid Insulation / Polymers"
+  },
+  {
+   "name": "EPR",
+   "ex": 3.25,
+   "ey": 3.25,
+   "qv": 0,
+   "folder": "Solid Insulation / Polymers"
+  },
+  {
+   "name": "Polypropylene",
+   "ex": 2.25,
+   "ey": 2.25,
+   "qv": 0,
+   "folder": "Solid Insulation / Polymers"
+  },
+  {
+   "name": "PTFE",
+   "ex": 2,
+   "ey": 2,
+   "qv": 0,
+   "folder": "Solid Insulation / Polymers"
+  },
+  {
+   "name": "Glass-reinforced polyester premix",
+   "ex": 6.3,
+   "ey": 6.3,
+   "qv": 0,
+   "folder": "Solid Insulation / Polymers"
+  },
+  {
+   "name": "Thermoplastic polyester",
+   "ex": 3.55,
+   "ey": 3.55,
+   "qv": 0,
+   "folder": "Solid Insulation / Polymers"
+  },
+  {
+   "name": "Polycarbonate",
+   "ex": 3.17,
+   "ey": 3.17,
+   "qv": 0,
+   "folder": "Solid Insulation / Polymers"
+  },
+  {
+   "name": "Epoxy (mineral filler)",
+   "ex": 5,
+   "ey": 5,
+   "qv": 0,
+   "folder": "Solid Insulation / Polymers"
+  },
+  {
+   "name": "Epoxy (silica filler)",
+   "ex": 3.85,
+   "ey": 3.85,
+   "qv": 0,
+   "folder": "Solid Insulation / Polymers"
+  },
+  {
+   "name": "Silicone rubber",
+   "ex": 3.65,
+   "ey": 3.65,
+   "qv": 0,
+   "folder": "Solid Insulation / Polymers"
+  },
+  {
+   "name": "Phenol-formaldehyde",
+   "ex": 5.3,
+   "ey": 5.3,
+   "qv": 0,
+   "folder": "Solid Insulation / Polymers"
+  },
+  {
+   "name": "Nylon 6,6",
+   "ex": 4,
+   "ey": 4,
+   "qv": 0,
+   "folder": "Solid Insulation / Polymers"
+  },
+  {
+   "name": "Polystyrene",
+   "ex": 2.6,
+   "ey": 2.6,
+   "qv": 0,
+   "folder": "Solid Insulation / Polymers"
+  },
+  {
+   "name": "Kapton HN polyimide film",
+   "ex": 3.4,
+   "ey": 3.4,
+   "qv": 0,
+   "folder": "Solid Insulation / Polymers"
+  },
+  {
+   "name": "Delrin 150 acetal (POM-H)",
+   "ex": 3.7,
+   "ey": 3.7,
+   "qv": 0,
+   "folder": "Solid Insulation / Polymers"
+  },
+  {
+   "name": "Mylar polyester film (PET)",
+   "ex": 3.3,
+   "ey": 3.3,
+   "qv": 0,
+   "folder": "Solid Insulation / Polymers"
+  },
+  {
+   "name": "Kapton FN 120FN616 (FEP-coated polyimide)",
+   "ex": 3.1,
+   "ey": 3.1,
+   "qv": 0,
+   "folder": "Solid Insulation / Polymers"
+  },
+  {
+   "name": "Kapton FN 150FN019 (FEP-coated polyimide)",
+   "ex": 2.7,
+   "ey": 2.7,
+   "qv": 0,
+   "folder": "Solid Insulation / Polymers"
+  },
+  {
+   "name": "Kapton FN 250FN029 (FEP-coated polyimide)",
+   "ex": 3,
+   "ey": 3,
+   "qv": 0,
+   "folder": "Solid Insulation / Polymers"
+  },
+  {
+   "name": "PVC, rigid (Trovidur PN)",
+   "ex": 3.2,
+   "ey": 3.2,
+   "qv": 0,
+   "folder": "Solid Insulation / Polymers"
+  },
+  {
+   "name": "Kraft paper, oil-impregnated",
+   "ex": 3.3,
+   "ey": 3.3,
+   "qv": 0,
+   "folder": "Solid Insulation / Polymers"
+  },
+  {
+   "name": "Natural rubber (polyisoprene)",
+   "ex": 2.6,
+   "ey": 2.6,
+   "qv": 0,
+   "folder": "Solid Insulation / Polymers"
+  },
+  {
+   "name": "Neoprene (polychloroprene)",
+   "ex": 6.6,
+   "ey": 6.6,
+   "qv": 0,
+   "folder": "Solid Insulation / Polymers"
+  },
+  {
+   "name": "SiO2 film",
+   "ex": 3.9,
+   "ey": 3.9,
+   "qv": 0,
+   "folder": "Solid Insulation / Thin-Film Dielectrics"
+  },
+  {
+   "name": "Si3N4",
+   "ex": 12.7,
+   "ey": 12.7,
+   "qv": 0,
+   "folder": "Solid Insulation / Thin-Film Dielectrics"
+  },
+  {
+   "name": "Ta2O5",
+   "ex": 28,
+   "ey": 28,
+   "qv": 0,
+   "folder": "Solid Insulation / Thin-Film Dielectrics"
+  },
+  {
+   "name": "HfO2",
+   "ex": 35,
+   "ey": 35,
+   "qv": 0,
+   "folder": "Solid Insulation / Thin-Film Dielectrics"
+  },
+  {
+   "name": "FR-4 epoxy-glass",
+   "ex": 4.35,
+   "ey": 4.35,
+   "qv": 0,
+   "folder": "Circuit Board Laminates"
+  },
+  {
+   "name": "Polyfunctional FR-4",
+   "ex": 4.35,
+   "ey": 4.35,
+   "qv": 0,
+   "folder": "Circuit Board Laminates"
+  },
+  {
+   "name": "Multifunctional FR-4",
+   "ex": 4.35,
+   "ey": 4.35,
+   "qv": 0,
+   "folder": "Circuit Board Laminates"
+  },
+  {
+   "name": "Polyimide-glass",
+   "ex": 4,
+   "ey": 4,
+   "qv": 0,
+   "folder": "Circuit Board Laminates"
+  },
+  {
+   "name": "BT epoxy",
+   "ex": 3.975,
+   "ey": 3.975,
+   "qv": 0,
+   "folder": "Circuit Board Laminates"
+  },
+  {
+   "name": "Cyanate ester-glass",
+   "ex": 3.55,
+   "ey": 3.55,
+   "qv": 0,
+   "folder": "Circuit Board Laminates"
+  },
+  {
+   "name": "PPO epoxy",
+   "ex": 4,
+   "ey": 4,
+   "qv": 0,
+   "folder": "Circuit Board Laminates"
+  },
+  {
+   "name": "PTFE-glass",
+   "ex": 2.5,
+   "ey": 2.5,
+   "qv": 0,
+   "folder": "Circuit Board Laminates"
+  },
+  {
+   "name": "Alumina substrate",
+   "ex": 8.9,
+   "ey": 8.9,
+   "qv": 0,
+   "folder": "Circuit Board Laminates"
+  },
+  {
+   "name": "Silicon",
+   "ex": 11.7,
+   "ey": 11.7,
+   "qv": 0,
+   "folder": "Semiconductors"
+  },
+  {
+   "name": "Germanium",
+   "ex": 16.2,
+   "ey": 16.2,
+   "qv": 0,
+   "folder": "Semiconductors"
+  },
+  {
+   "name": "Gallium arsenide (GaAs)",
+   "ex": 12.9,
+   "ey": 12.9,
+   "qv": 0,
+   "folder": "Semiconductors"
+  },
+  {
+   "name": "Indium phosphide (InP)",
+   "ex": 12.5,
+   "ey": 12.5,
+   "qv": 0,
+   "folder": "Semiconductors"
+  },
+  {
+   "name": "Gallium nitride (GaN, wurtzite)",
+   "ex": 8.9,
+   "ey": 8.9,
+   "qv": 0,
+   "folder": "Semiconductors"
+  },
+  {
+   "name": "Silicon carbide, 6H (c-axis along y)",
+   "ex": 9.66,
+   "ey": 10.03,
+   "qv": 0,
+   "folder": "Semiconductors"
+  },
+  {
+   "name": "Diamond",
+   "ex": 5.7,
+   "ey": 5.7,
+   "qv": 0,
+   "folder": "Semiconductors"
+  }
+ ]
+}

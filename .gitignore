@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+build/
+dist/
+
+# FEMM solution files and scratch output produced while testing
+*.ans
+*.res
+scratch/
+work/
+**/out/
+
+# Local tooling / Claude Code local state
+.claude/settings.local.json
+.claude/worktrees/
+.mcp.local.json
+.env
+.env.*
+*.log
+
+# Video build artefacts
+video/node_modules/
+video/out/

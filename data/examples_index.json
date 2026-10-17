@@ -1,0 +1,723 @@
+{
+ "roots": [
+  "C:/femm-qt/examples",
+  "C:/femm-qt/pyfemm/examples"
+ ],
+ "count": 68,
+ "by_extension": {
+  ".fec": 4,
+  ".fee": 2,
+  ".feh": 1,
+  ".fem": 20,
+  ".jl": 6,
+  ".lua": 5,
+  ".m": 7,
+  ".nb": 4,
+  ".py": 14,
+  ".sce": 5
+ },
+ "files": [
+  {
+   "name": "2horse.fem",
+   "path": "C:/femm-qt/examples/2horse.fem",
+   "size_bytes": 16101,
+   "extension": ".fem",
+   "tree": "examples",
+   "femm_header": {
+    "problem_type": "planar",
+    "length_units": "millimeters",
+    "frequency_hz": "0.25",
+    "depth": "100",
+    "format": "4.0"
+   }
+  },
+  {
+   "name": "2horse_femm42.lua",
+   "path": "C:/femm-qt/examples/2horse_femm42.lua",
+   "size_bytes": 816,
+   "extension": ".lua",
+   "tree": "examples",
+   "first_comment_line": "open up the base geometry file"
+  },
+  {
+   "name": "2horse_femm42.py",
+   "path": "C:/femm-qt/examples/2horse_femm42.py",
+   "size_bytes": 1018,
+   "extension": ".py",
+   "tree": "examples",
+   "first_comment_line": "2horse_femm42.py - 2-horse motor frequency sweep (port of 2horse_femm42.lua)"
+  },
+  {
+   "name": "ACElec2.fec",
+   "path": "C:/femm-qt/examples/ACElec2.fec",
+   "size_bytes": 1506,
+   "extension": ".fec",
+   "tree": "examples",
+   "femm_header": {
+    "problem_type": "planar",
+    "length_units": "millimeters",
+    "frequency_hz": "60",
+    "depth": "1",
+    "format": "1"
+   }
+  },
+  {
+   "name": "ACElec2.jl",
+   "path": "C:/femm-qt/examples/ACElec2.jl",
+   "size_bytes": 1504,
+   "extension": ".jl",
+   "tree": "examples",
+   "first_comment_line": "ACElec2.jl"
+  },
+  {
+   "name": "ACElec2.lua",
+   "path": "C:/femm-qt/examples/ACElec2.lua",
+   "size_bytes": 1669,
+   "extension": ".lua",
+   "tree": "examples",
+   "first_comment_line": "Define some functions that will make it easier to draw the geometry"
+  },
+  {
+   "name": "ACElec2.m",
+   "path": "C:/femm-qt/examples/ACElec2.m",
+   "size_bytes": 1446,
+   "extension": ".m",
+   "tree": "examples",
+   "first_comment_line": "ACElec2"
+  },
+  {
+   "name": "ACElec2.py",
+   "path": "C:/femm-qt/examples/ACElec2.py",
+   "size_bytes": 1346,
+   "extension": ".py",
+   "tree": "examples",
+   "first_comment_line": "ACElec2.py - Current flow example (port of ACElec2.lua)"
+  },
+  {
+   "name": "ACElec2.sce",
+   "path": "C:/femm-qt/examples/ACElec2.sce",
+   "size_bytes": 1363,
+   "extension": ".sce",
+   "tree": "examples",
+   "first_comment_line": "ACElec2"
+  },
+  {
+   "name": "ACElec2a.fec",
+   "path": "C:/femm-qt/examples/ACElec2a.fec",
+   "size_bytes": 1678,
+   "extension": ".fec",
+   "tree": "examples",
+   "femm_header": {
+    "problem_type": "axisymmetric",
+    "length_units": "millimeters",
+    "frequency_hz": "1000",
+    "depth": "1",
+    "format": "1"
+   }
+  },
+  {
+   "name": "ACElec3.fec",
+   "path": "C:/femm-qt/examples/ACElec3.fec",
+   "size_bytes": 3623,
+   "extension": ".fec",
+   "tree": "examples",
+   "femm_header": {
+    "problem_type": "planar",
+    "length_units": "millimeters",
+    "frequency_hz": "50",
+    "depth": "1000",
+    "format": "1"
+   }
+  },
+  {
+   "name": "CoggingTorque.fem",
+   "path": "C:/femm-qt/examples/CoggingTorque.fem",
+   "size_bytes": 16748,
+   "extension": ".fem",
+   "tree": "examples",
+   "femm_header": {
+    "problem_type": "planar",
+    "length_units": "millimeters",
+    "frequency_hz": "0",
+    "depth": "76",
+    "format": "4.0"
+   }
+  },
+  {
+   "name": "DoubleSidedLIM.fem",
+   "path": "C:/femm-qt/examples/DoubleSidedLIM.fem",
+   "size_bytes": 5059,
+   "extension": ".fem",
+   "tree": "examples",
+   "femm_header": {
+    "problem_type": "planar",
+    "length_units": "centimeters",
+    "frequency_hz": "1",
+    "depth": "15",
+    "format": "4.0"
+   }
+  },
+  {
+   "name": "Force-vs-Position.lua",
+   "path": "C:/femm-qt/examples/Force-vs-Position.lua",
+   "size_bytes": 374,
+   "extension": ".lua",
+   "tree": "examples",
+   "first_comment_line": null
+  },
+  {
+   "name": "Force-vs-Position.py",
+   "path": "C:/femm-qt/examples/Force-vs-Position.py",
+   "size_bytes": 737,
+   "extension": ".py",
+   "tree": "examples",
+   "first_comment_line": "Force-vs-Position.py - Magnetics example (port of Force-vs-Position.lua)"
+  },
+  {
+   "name": "IABC.fem",
+   "path": "C:/femm-qt/examples/IABC.fem",
+   "size_bytes": 6806,
+   "extension": ".fem",
+   "tree": "examples",
+   "femm_header": {
+    "problem_type": "planar",
+    "length_units": "centimeters",
+    "frequency_hz": "0",
+    "depth": "100",
+    "format": "4.0"
+   }
+  },
+  {
+   "name": "KelvinTransformation.fem",
+   "path": "C:/femm-qt/examples/KelvinTransformation.fem",
+   "size_bytes": 3238,
+   "extension": ".fem",
+   "tree": "examples",
+   "femm_header": {
+    "problem_type": "planar",
+    "length_units": "centimeters",
+    "frequency_hz": "0",
+    "depth": "100",
+    "format": "4.0"
+   }
+  },
+  {
+   "name": "MathFEMM-Demo2.nb",
+   "path": "C:/femm-qt/examples/MathFEMM-Demo2.nb",
+   "size_bytes": 89526,
+   "extension": ".nb",
+   "tree": "examples"
+  },
+  {
+   "name": "ProximityApprox.fem",
+   "path": "C:/femm-qt/examples/ProximityApprox.fem",
+   "size_bytes": 2201,
+   "extension": ".fem",
+   "tree": "examples",
+   "femm_header": {
+    "problem_type": "axisymmetric",
+    "length_units": "millimeters",
+    "frequency_hz": "50000",
+    "depth": "1",
+    "format": "4.0"
+   }
+  },
+  {
+   "name": "ProximityExact.fem",
+   "path": "C:/femm-qt/examples/ProximityExact.fem",
+   "size_bytes": 24891,
+   "extension": ".fem",
+   "tree": "examples",
+   "femm_header": {
+    "problem_type": "axisymmetric",
+    "length_units": "millimeters",
+    "frequency_hz": "50000",
+    "depth": "1",
+    "format": "4.0"
+   }
+  },
+  {
+   "name": "RadialMagneticBearing.fem",
+   "path": "C:/femm-qt/examples/RadialMagneticBearing.fem",
+   "size_bytes": 10461,
+   "extension": ".fem",
+   "tree": "examples",
+   "femm_header": {
+    "problem_type": "planar",
+    "length_units": "inches",
+    "frequency_hz": "0",
+    "depth": "1.6000000000000001",
+    "format": "4.0"
+   }
+  },
+  {
+   "name": "Roters-Ch9Fig6.fem",
+   "path": "C:/femm-qt/examples/Roters-Ch9Fig6.fem",
+   "size_bytes": 7963,
+   "extension": ".fem",
+   "tree": "examples",
+   "femm_header": {
+    "problem_type": "axisymmetric",
+    "length_units": "inches",
+    "frequency_hz": "0",
+    "depth": "39.370078740157481",
+    "format": "4.0"
+   }
+  },
+  {
+   "name": "SpeakerMotor.fem",
+   "path": "C:/femm-qt/examples/SpeakerMotor.fem",
+   "size_bytes": 5502,
+   "extension": ".fem",
+   "tree": "examples",
+   "femm_header": {
+    "problem_type": "axisymmetric",
+    "length_units": "inches",
+    "frequency_hz": "0",
+    "depth": "1",
+    "format": "4.0"
+   }
+  },
+  {
+   "name": "TEAMProblem28.fem",
+   "path": "C:/femm-qt/examples/TEAMProblem28.fem",
+   "size_bytes": 3299,
+   "extension": ".fem",
+   "tree": "examples",
+   "femm_header": {
+    "problem_type": "axisymmetric",
+    "length_units": "centimeters",
+    "frequency_hz": "50",
+    "depth": "1",
+    "format": "4.0"
+   }
+  },
+  {
+   "name": "ThrustBearing.fem",
+   "path": "C:/femm-qt/examples/ThrustBearing.fem",
+   "size_bytes": 3539,
+   "extension": ".fem",
+   "tree": "examples",
+   "femm_header": {
+    "problem_type": "axisymmetric",
+    "length_units": "inches",
+    "frequency_hz": "5",
+    "depth": "39.370078740157481",
+    "format": "4.0"
+   }
+  },
+  {
+   "name": "ac_magnetics.lua",
+   "path": "C:/femm-qt/examples/ac_magnetics.lua",
+   "size_bytes": 2881,
+   "extension": ".lua",
+   "tree": "examples",
+   "first_comment_line": "ac_magnetics.lua"
+  },
+  {
+   "name": "bdemo1.fee",
+   "path": "C:/femm-qt/examples/bdemo1.fee",
+   "size_bytes": 938,
+   "extension": ".fee",
+   "tree": "examples",
+   "femm_header": {
+    "problem_type": "planar",
+    "length_units": "centimeters",
+    "frequency_hz": null,
+    "depth": "100",
+    "format": "1"
+   }
+  },
+  {
+   "name": "bdemo2.fee",
+   "path": "C:/femm-qt/examples/bdemo2.fee",
+   "size_bytes": 1060,
+   "extension": ".fee",
+   "tree": "examples",
+   "femm_header": {
+    "problem_type": "axisymmetric",
+    "length_units": "meters",
+    "frequency_hz": null,
+    "depth": "1",
+    "format": "1"
+   }
+  },
+  {
+   "name": "coil.fem",
+   "path": "C:/femm-qt/examples/coil.fem",
+   "size_bytes": 2955,
+   "extension": ".fem",
+   "tree": "examples",
+   "femm_header": {
+    "problem_type": "axisymmetric",
+    "length_units": "millimeters",
+    "frequency_hz": "0",
+    "depth": "1",
+    "format": "4.0"
+   }
+  },
+  {
+   "name": "coilgun.fem",
+   "path": "C:/femm-qt/examples/coilgun.fem",
+   "size_bytes": 2325,
+   "extension": ".fem",
+   "tree": "examples",
+   "femm_header": {
+    "problem_type": "axisymmetric",
+    "length_units": "inches",
+    "frequency_hz": "0",
+    "depth": "0",
+    "format": "4.0"
+   }
+  },
+  {
+   "name": "coilgun.jl",
+   "path": "C:/femm-qt/examples/coilgun.jl",
+   "size_bytes": 707,
+   "extension": ".jl",
+   "tree": "examples",
+   "first_comment_line": "coilgun.jl"
+  },
+  {
+   "name": "coilgun.lua",
+   "path": "C:/femm-qt/examples/coilgun.lua",
+   "size_bytes": 2177,
+   "extension": ".lua",
+   "tree": "examples",
+   "first_comment_line": "coilgun.lua"
+  },
+  {
+   "name": "coilgun.py",
+   "path": "C:/femm-qt/examples/coilgun.py",
+   "size_bytes": 315,
+   "extension": ".py",
+   "tree": "examples",
+   "first_comment_line": null
+  },
+  {
+   "name": "cond_layer.FEC",
+   "path": "C:/femm-qt/examples/cond_layer.FEC",
+   "size_bytes": 2021,
+   "extension": ".fec",
+   "tree": "examples",
+   "femm_header": {
+    "problem_type": "axisymmetric",
+    "length_units": "centimeters",
+    "frequency_hz": "500",
+    "depth": "1",
+    "format": "1"
+   }
+  },
+  {
+   "name": "demo2.jl",
+   "path": "C:/femm-qt/examples/demo2.jl",
+   "size_bytes": 4171,
+   "extension": ".jl",
+   "tree": "examples",
+   "first_comment_line": "Wound Copper Coil with an Iron Core"
+  },
+  {
+   "name": "demo2.m",
+   "path": "C:/femm-qt/examples/demo2.m",
+   "size_bytes": 4975,
+   "extension": ".m",
+   "tree": "examples",
+   "first_comment_line": null
+  },
+  {
+   "name": "demo2.sce",
+   "path": "C:/femm-qt/examples/demo2.sce",
+   "size_bytes": 4784,
+   "extension": ".sce",
+   "tree": "examples",
+   "first_comment_line": "Wound Copper Coil with an Iron Core"
+  },
+  {
+   "name": "htutor.feh",
+   "path": "C:/femm-qt/examples/htutor.feh",
+   "size_bytes": 1070,
+   "extension": ".feh",
+   "tree": "examples",
+   "femm_header": {
+    "problem_type": "planar",
+    "length_units": "meters",
+    "frequency_hz": null,
+    "depth": "20",
+    "format": "1"
+   }
+  },
+  {
+   "name": "htutor.jl",
+   "path": "C:/femm-qt/examples/htutor.jl",
+   "size_bytes": 1747,
+   "extension": ".jl",
+   "tree": "examples",
+   "first_comment_line": null
+  },
+  {
+   "name": "htutor.m",
+   "path": "C:/femm-qt/examples/htutor.m",
+   "size_bytes": 1622,
+   "extension": ".m",
+   "tree": "examples",
+   "first_comment_line": null
+  },
+  {
+   "name": "htutor.nb",
+   "path": "C:/femm-qt/examples/htutor.nb",
+   "size_bytes": 61972,
+   "extension": ".nb",
+   "tree": "examples"
+  },
+  {
+   "name": "htutor.sce",
+   "path": "C:/femm-qt/examples/htutor.sce",
+   "size_bytes": 1613,
+   "extension": ".sce",
+   "tree": "examples",
+   "first_comment_line": "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
+  },
+  {
+   "name": "lrk.fem",
+   "path": "C:/femm-qt/examples/lrk.fem",
+   "size_bytes": 20478,
+   "extension": ".fem",
+   "tree": "examples",
+   "femm_header": {
+    "problem_type": "planar",
+    "length_units": "millimeters",
+    "frequency_hz": "0",
+    "depth": "45",
+    "format": "4.0"
+   }
+  },
+  {
+   "name": "mySPMLossScriptAGB.m",
+   "path": "C:/femm-qt/examples/mySPMLossScriptAGB.m",
+   "size_bytes": 8644,
+   "extension": ".m",
+   "tree": "examples",
+   "first_comment_line": "Core Loss Calculation Script"
+  },
+  {
+   "name": "mySPMLossScriptAGB.py",
+   "path": "C:/femm-qt/examples/mySPMLossScriptAGB.py",
+   "size_bytes": 13550,
+   "extension": ".py",
+   "tree": "examples",
+   "first_comment_line": "Core Loss Calculation Script"
+  },
+  {
+   "name": "mySPMLossScriptAGB_fast.m",
+   "path": "C:/femm-qt/examples/mySPMLossScriptAGB_fast.m",
+   "size_bytes": 6975,
+   "extension": ".m",
+   "tree": "examples",
+   "first_comment_line": "Core Loss Calculation Script (Bulk Data Version)"
+  },
+  {
+   "name": "mySPMLossScriptAGB_fast.py",
+   "path": "C:/femm-qt/examples/mySPMLossScriptAGB_fast.py",
+   "size_bytes": 14807,
+   "extension": ".py",
+   "tree": "examples",
+   "first_comment_line": "Core Loss Calculation Script (Bulk Data Version)"
+  },
+  {
+   "name": "my_SPM_motor_AGB.fem",
+   "path": "C:/femm-qt/examples/my_SPM_motor_AGB.fem",
+   "size_bytes": 25327,
+   "extension": ".fem",
+   "tree": "examples",
+   "femm_header": {
+    "problem_type": "planar",
+    "length_units": "inches",
+    "frequency_hz": "0",
+    "depth": "0.29999999999999999",
+    "format": "4.0"
+   }
+  },
+  {
+   "name": "open1.py",
+   "path": "C:/femm-qt/examples/open1.py",
+   "size_bytes": 4848,
+   "extension": ".py",
+   "tree": "examples",
+   "first_comment_line": null
+  },
+  {
+   "name": "plot-mesh-matplotlib.py",
+   "path": "C:/femm-qt/examples/plot-mesh-matplotlib.py",
+   "size_bytes": 3566,
+   "extension": ".py",
+   "tree": "examples",
+   "first_comment_line": "Plotting a real FEMM solution with matplotlib, over the PyBridge."
+  },
+  {
+   "name": "roters1b.fem",
+   "path": "C:/femm-qt/examples/roters1b.fem",
+   "size_bytes": 3816,
+   "extension": ".fem",
+   "tree": "examples",
+   "femm_header": {
+    "problem_type": "axisymmetric",
+    "length_units": "inches",
+    "frequency_hz": "0",
+    "depth": "39.370078740157481",
+    "format": "4.0"
+   }
+  },
+  {
+   "name": "roters1b.jl",
+   "path": "C:/femm-qt/examples/roters1b.jl",
+   "size_bytes": 1286,
+   "extension": ".jl",
+   "tree": "examples",
+   "first_comment_line": "Roters1b: Simulation of a Tapered Plunger Magnet"
+  },
+  {
+   "name": "roters1b.m",
+   "path": "C:/femm-qt/examples/roters1b.m",
+   "size_bytes": 1051,
+   "extension": ".m",
+   "tree": "examples",
+   "first_comment_line": null
+  },
+  {
+   "name": "roters1b.nb",
+   "path": "C:/femm-qt/examples/roters1b.nb",
+   "size_bytes": 56580,
+   "extension": ".nb",
+   "tree": "examples"
+  },
+  {
+   "name": "roters1b.sce",
+   "path": "C:/femm-qt/examples/roters1b.sce",
+   "size_bytes": 1086,
+   "extension": ".sce",
+   "tree": "examples",
+   "first_comment_line": null
+  },
+  {
+   "name": "strips.jl",
+   "path": "C:/femm-qt/examples/strips.jl",
+   "size_bytes": 4494,
+   "extension": ".jl",
+   "tree": "examples",
+   "first_comment_line": "Electrostatics Example"
+  },
+  {
+   "name": "strips.m",
+   "path": "C:/femm-qt/examples/strips.m",
+   "size_bytes": 5109,
+   "extension": ".m",
+   "tree": "examples",
+   "first_comment_line": null
+  },
+  {
+   "name": "strips.nb",
+   "path": "C:/femm-qt/examples/strips.nb",
+   "size_bytes": 58489,
+   "extension": ".nb",
+   "tree": "examples"
+  },
+  {
+   "name": "strips.sce",
+   "path": "C:/femm-qt/examples/strips.sce",
+   "size_bytes": 4928,
+   "extension": ".sce",
+   "tree": "examples",
+   "first_comment_line": "Electrostatics Example"
+  },
+  {
+   "name": "tutorial.fem",
+   "path": "C:/femm-qt/examples/tutorial.fem",
+   "size_bytes": 5734,
+   "extension": ".fem",
+   "tree": "examples",
+   "femm_header": {
+    "problem_type": "axisymmetric",
+    "length_units": "inches",
+    "frequency_hz": "0",
+    "depth": "1",
+    "format": "4.0"
+   }
+  },
+  {
+   "name": "ACElec2.py",
+   "path": "C:/femm-qt/pyfemm/examples/ACElec2.py",
+   "size_bytes": 1580,
+   "extension": ".py",
+   "tree": "pyfemm/examples",
+   "first_comment_line": "ACElec2"
+  },
+  {
+   "name": "coilgun.fem",
+   "path": "C:/femm-qt/pyfemm/examples/coilgun.fem",
+   "size_bytes": 2325,
+   "extension": ".fem",
+   "tree": "pyfemm/examples",
+   "femm_header": {
+    "problem_type": "axisymmetric",
+    "length_units": "inches",
+    "frequency_hz": "0",
+    "depth": "0",
+    "format": "4.0"
+   }
+  },
+  {
+   "name": "coilgun.py",
+   "path": "C:/femm-qt/pyfemm/examples/coilgun.py",
+   "size_bytes": 487,
+   "extension": ".py",
+   "tree": "pyfemm/examples",
+   "first_comment_line": null
+  },
+  {
+   "name": "demo2.py",
+   "path": "C:/femm-qt/pyfemm/examples/demo2.py",
+   "size_bytes": 4457,
+   "extension": ".py",
+   "tree": "pyfemm/examples",
+   "first_comment_line": "Wound Copper Coil with an Iron Core"
+  },
+  {
+   "name": "htutor.py",
+   "path": "C:/femm-qt/pyfemm/examples/htutor.py",
+   "size_bytes": 1851,
+   "extension": ".py",
+   "tree": "pyfemm/examples",
+   "first_comment_line": null
+  },
+  {
+   "name": "roters1b.fem",
+   "path": "C:/femm-qt/pyfemm/examples/roters1b.fem",
+   "size_bytes": 3816,
+   "extension": ".fem",
+   "tree": "pyfemm/examples",
+   "femm_header": {
+    "problem_type": "axisymmetric",
+    "length_units": "inches",
+    "frequency_hz": "0",
+    "depth": "39.370078740157481",
+    "format": "4.0"
+   }
+  },
+  {
+   "name": "roters1b.py",
+   "path": "C:/femm-qt/pyfemm/examples/roters1b.py",
+   "size_bytes": 1121,
+   "extension": ".py",
+   "tree": "pyfemm/examples",
+   "first_comment_line": "Roters1b: Simulation of a Tapered Plunger Magnet"
+  },
+  {
+   "name": "strips.py",
+   "path": "C:/femm-qt/pyfemm/examples/strips.py",
+   "size_bytes": 4800,
+   "extension": ".py",
+   "tree": "pyfemm/examples",
+   "first_comment_line": null
+  }
+ ]
+}

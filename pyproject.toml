@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "femm-agent-suite"
+version = "0.1.0"
+description = "All-in-one FEMM 5 agent toolkit: MCP server, physics checks, experiments and Claude skills for 2D magnetic, electrostatic, thermal and current-flow FEA"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+dependencies = ["mcp>=1.10"]
+keywords = ["femm", "fea", "magnetics", "electric-machines", "mcp", "claude", "agents"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: MacOS",
+  "Operating System :: POSIX :: Linux",
+  "Topic :: Scientific/Engineering",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "matplotlib>=3.7", "numpy>=1.24"]
+plots = ["matplotlib>=3.7", "numpy>=1.24"]
+
+[project.urls]
+Homepage = "https://github.com/Zwl20085/femm-agent-suite"
+Repository = "https://github.com/Zwl20085/femm-agent-suite"
+Issues = "https://github.com/Zwl20085/femm-agent-suite/issues"
+
+[project.scripts]
+femm-mcp = "femm_agent.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/femm_agent"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"data" = "femm_agent/data"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["live: needs a local FEMM 5 installation (run with -m live)"]
+addopts = "-m 'not live'"

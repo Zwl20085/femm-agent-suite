@@ -1,0 +1,931 @@
+{
+ "source": "C:/femm-qt/bin/matlib.dat (names from magnetics.json)",
+ "count": 282,
+ "names_sorted": [
+  "0.125mm",
+  "0.16mm",
+  "0.25mm",
+  "0.2mm",
+  "0.315mm",
+  "0.4mm",
+  "0.5mm",
+  "0.63mm",
+  "0.8mm",
+  "1.25mm",
+  "1.6mm",
+  "10 AWG",
+  "10 SWG",
+  "1004 Steel (1400°F)",
+  "1004 Steel (hot rolled)",
+  "1006 Steel (1400°F)",
+  "1006 Steel (hot rolled)",
+  "1008 Steel (1400°F)",
+  "1008 Steel (hot rolled)",
+  "1010 Steel (1400°F)",
+  "1010 Steel (hot rolled)",
+  "1018 Steel (1400°F)",
+  "1018 Steel (hot rolled)",
+  "1020 Steel (1400°F)",
+  "1020 Steel (hot rolled)",
+  "1030 Steel (1400°F)",
+  "1030 Steel (hot rolled)",
+  "10AWG 10% CCA",
+  "10AWG 15% CCA",
+  "1117 Steel (1400°F)",
+  "1117 Steel (hot rolled)",
+  "11AWG 10% CCA",
+  "11AWG 15% CCA",
+  "12 AWG",
+  "12 SWG",
+  "12AWG 10% CCA",
+  "12AWG 15% CCA",
+  "13AWG 10% CCA",
+  "13AWG 15% CCA",
+  "14 AWG",
+  "14 SWG",
+  "14AWG 10% CCA",
+  "14AWG 15% CCA",
+  "15AWG 10% CCA",
+  "15AWG 15% CCA",
+  "16 AWG",
+  "16 SWG",
+  "16AWG 10% CCA",
+  "16AWG 15% CCA",
+  "17AWG 10% CCA",
+  "17AWG 15% CCA",
+  "18 AWG",
+  "18 SWG",
+  "18AWG 10% CCA",
+  "18AWG 15% CCA",
+  "19AWG 10% CCA",
+  "19AWG 15% CCA",
+  "1mm",
+  "2.5mm",
+  "20 AWG",
+  "20 SWG",
+  "20AWG 10% CCA",
+  "20AWG 15% CCA",
+  "21AWG 10% CCA",
+  "21AWG 15% CCA",
+  "22 AWG",
+  "22 SWG",
+  "22AWG 10% CCA",
+  "22AWG 15% CCA",
+  "23AWG 10% CCA",
+  "23AWG 15% CCA",
+  "24 AWG",
+  "24 SWG",
+  "24AWG 10% CCA",
+  "24AWG 15% CCA",
+  "25AWG 10% CCA",
+  "25AWG 15% CCA",
+  "26 AWG",
+  "26 SWG",
+  "26AWG 10% CCA",
+  "26AWG 15% CCA",
+  "27AWG 10% CCA",
+  "27AWG 15% CCA",
+  "28 AWG",
+  "28 SWG",
+  "28AWG 10% CCA",
+  "28AWG 15% CCA",
+  "29AWG 10% CCA",
+  "29AWG 15% CCA",
+  "2mm",
+  "3% Si strip, oriented",
+  "30 AWG",
+  "30 SWG",
+  "30% Ni-Fe temperature compensation alloy",
+  "304 Stainless Steel",
+  "30AWG 10% CCA",
+  "30AWG 15% CCA",
+  "316 Stainless Steel",
+  "31AWG 10% CCA",
+  "31AWG 15% CCA",
+  "32 AWG",
+  "32 SWG",
+  "32AWG 10% CCA",
+  "32AWG 15% CCA",
+  "33AWG 10% CCA",
+  "33AWG 15% CCA",
+  "34 AWG",
+  "34 SWG",
+  "34AWG 10% CCA",
+  "34AWG 15% CCA",
+  "35AWG 10% CCA",
+  "35AWG 15% CCA",
+  "36 AWG",
+  "36 SWG",
+  "36AWG 10% CCA",
+  "36AWG 15% CCA",
+  "37AWG 10% CCA",
+  "37AWG 15% CCA",
+  "38 SWG",
+  "38AWG 10% CCA",
+  "38AWG 15% CCA",
+  "39AWG 10% CCA",
+  "39AWG 15% CCA",
+  "40 SWG",
+  "40AWG 10% CCA",
+  "40AWG 15% CCA",
+  "416 stainless steel, annealed",
+  "41AWG 10% CCA",
+  "41AWG 15% CCA",
+  "42AWG 10% CCA",
+  "42AWG 15% CCA",
+  "43AWG 10% CCA",
+  "43AWG 15% CCA",
+  "44AWG 10% CCA",
+  "44AWG 15% CCA",
+  "4750 alloy",
+  "65 Permalloy, oriented",
+  "78 Permalloy",
+  "ARMCO Pure Iron",
+  "ARMCO Telar 57",
+  "Air",
+  "Aluminum, 1100",
+  "Aluminum, 6061-T6",
+  "BN1",
+  "BN10",
+  "BN2",
+  "BN3",
+  "BN4",
+  "BN5",
+  "BN6",
+  "BN7",
+  "BN8",
+  "BN9",
+  "Carbon steel forgings, annealed",
+  "Cast Alnico 2 (LNG12)",
+  "Cast Alnico 3 (LNG10)",
+  "Cast Alnico 5 (LNG37)",
+  "Cast Alnico 5 (LNG40)",
+  "Cast Alnico 5 (LNG44)",
+  "Cast Alnico 5-7 (LNG56)",
+  "Cast Alnico 6 (LNGT28)",
+  "Cast Alnico 8 (LNGT32)",
+  "Cast Alnico 8 (LNGT38)",
+  "Cast Alnico 8 (LNGT44)",
+  "Cast Alnico 9 (LNGT72)",
+  "Ceramic 1",
+  "Ceramic 5",
+  "Ceramic 7",
+  "Ceramic 8A",
+  "Ceramic 8B",
+  "CoFe 27Co",
+  "CoFe 49Co-2V, high strength",
+  "CoFe 49Co-2V, magnetic anneal",
+  "CoFe 49Co-2V, rotor grade",
+  "Cold drawn carbon steel, annealed",
+  "Cold rolled low carbon strip steel",
+  "Copper",
+  "Deltamax, oriented",
+  "Gray iron, as cast",
+  "Hot rolled low-carbon steel",
+  "Ingot iron, annealed",
+  "M-14",
+  "M-15 14 mil",
+  "M-19",
+  "M-19 14 mil",
+  "M-22",
+  "M-22 14 mil",
+  "M-27",
+  "M-27 14 mil",
+  "M-36 14 mil",
+  "M-43 18 mil",
+  "M-43 and M-36",
+  "M-45 18 mil",
+  "M-47 18 mil",
+  "M-50",
+  "Malleable iron castings, as cast",
+  "Metglas 2605HB1M, field annealed",
+  "Metglas 2605SA1, field annealed",
+  "Moly-Permalloy",
+  "Monel, annealed",
+  "Monimax, nonoriented",
+  "Monimax, oriented",
+  "Mumetal",
+  "N30",
+  "N33",
+  "N35",
+  "N38",
+  "N40",
+  "N42",
+  "N45",
+  "N48",
+  "N50",
+  "N52",
+  "N55",
+  "NiFe 48Ni, hydrogen anneal",
+  "NiFe 48Ni, mill anneal (as received)",
+  "NiFe 80Ni-4Mo, hydrogen anneal",
+  "NiFe 80Ni-5Mo, hydrogen anneal",
+  "Nodular cast iron",
+  "Perminvar (45% Ni - 25% Co)",
+  "Powdered iron, sintered and annealed",
+  "Pure iron, annealed",
+  "Pure nickel, annealed",
+  "Q-Core 18 mil",
+  "Q-Core 24 mil",
+  "Sinimax",
+  "Sintered Alnico 2 (FLNG12)",
+  "Sintered Alnico 5 (FLNG34)",
+  "Sintered Alnico 8 (FLNGT38)",
+  "SmCo18(1:5)",
+  "SmCo20(1:5)",
+  "SmCo22(1:5)",
+  "SmCo24",
+  "SmCo24(1:5)",
+  "SmCo26",
+  "SmCo28",
+  "SmCo30",
+  "SmCo32",
+  "Soft magnetic ferrite (Fe-Ni-Zn-V)",
+  "Stainless 12Cr ferritic, annealed",
+  "Stainless 15-5 PH, Condition A",
+  "Stainless 15-5 PH, H 1075/H 1100",
+  "Stainless 15-5 PH, H 1150",
+  "Stainless 15-5 PH, H 900",
+  "Stainless 17-4 PH, Condition A",
+  "Stainless 17-4 PH, H 1075/H 1100",
+  "Stainless 17-4 PH, H 1150",
+  "Stainless 17-4 PH, H 900",
+  "Stainless 410, annealed",
+  "Stainless 416, annealed",
+  "Stainless 420, annealed",
+  "Stainless 430F, annealed",
+  "Stainless 430FR, annealed",
+  "Stainless 430FR, cold drawn",
+  "Stainless 446, annealed",
+  "Stainless PH 13-8 Mo, H 950",
+  "Stator B 18 mil",
+  "Stator B 25 mil",
+  "Stator B SP 25 mil",
+  "Steel castings, as cast",
+  "Supermalloy",
+  "Supermendur",
+  "Titanium, CP Grade 1",
+  "Titanium, Ti-6Al-4V",
+  "Type 2-S 18 mil",
+  "Type 2-S 24 mil",
+  "Vanadium Permendur",
+  "Y26H",
+  "Y26H-2",
+  "Y27H",
+  "Y28H-1",
+  "Y30",
+  "Y30BH",
+  "Y30H-1",
+  "Y30H-2",
+  "Y32",
+  "Y33",
+  "Y33H",
+  "Y34",
+  "Y35",
+  "Y36",
+  "Y38"
+ ],
+ "families": {
+  "Air": [
+   "Air"
+  ],
+  "Alnico": [
+   "Cast Alnico 2 (LNG12)",
+   "Cast Alnico 3 (LNG10)",
+   "Cast Alnico 5 (LNG37)",
+   "Cast Alnico 5 (LNG40)",
+   "Cast Alnico 5 (LNG44)",
+   "Cast Alnico 5-7 (LNG56)",
+   "Cast Alnico 6 (LNGT28)",
+   "Cast Alnico 8 (LNGT32)",
+   "Cast Alnico 8 (LNGT38)",
+   "Cast Alnico 8 (LNGT44)",
+   "Cast Alnico 9 (LNGT72)",
+   "Sintered Alnico 2 (FLNG12)",
+   "Sintered Alnico 5 (FLNG34)",
+   "Sintered Alnico 8 (FLNGT38)"
+  ],
+  "Amorphous (Metglas)": [
+   "Metglas 2605HB1M, field annealed",
+   "Metglas 2605SA1, field annealed"
+  ],
+  "Ceramic (CN grades)": [
+   "Y26H",
+   "Y26H-2",
+   "Y27H",
+   "Y28H-1",
+   "Y30",
+   "Y30BH",
+   "Y30H-1",
+   "Y30H-2",
+   "Y32",
+   "Y33",
+   "Y33H",
+   "Y34",
+   "Y35",
+   "Y36",
+   "Y38"
+  ],
+  "Ceramic (US grades)": [
+   "Ceramic 1",
+   "Ceramic 5",
+   "Ceramic 7",
+   "Ceramic 8A",
+   "Ceramic 8B"
+  ],
+  "CoFe (cobalt iron)": [
+   "CoFe 27Co",
+   "CoFe 49Co-2V, high strength",
+   "CoFe 49Co-2V, magnetic anneal",
+   "CoFe 49Co-2V, rotor grade"
+  ],
+  "Copper-clad aluminum wire": [
+   "10AWG 10% CCA",
+   "10AWG 15% CCA",
+   "11AWG 10% CCA",
+   "11AWG 15% CCA",
+   "12AWG 10% CCA",
+   "12AWG 15% CCA",
+   "13AWG 10% CCA",
+   "13AWG 15% CCA",
+   "14AWG 10% CCA",
+   "14AWG 15% CCA",
+   "15AWG 10% CCA",
+   "15AWG 15% CCA",
+   "16AWG 10% CCA",
+   "16AWG 15% CCA",
+   "17AWG 10% CCA",
+   "17AWG 15% CCA",
+   "18AWG 10% CCA",
+   "18AWG 15% CCA",
+   "19AWG 10% CCA",
+   "19AWG 15% CCA",
+   "20AWG 10% CCA",
+   "20AWG 15% CCA",
+   "21AWG 10% CCA",
+   "21AWG 15% CCA",
+   "22AWG 10% CCA",
+   "22AWG 15% CCA",
+   "23AWG 10% CCA",
+   "23AWG 15% CCA",
+   "24AWG 10% CCA",
+   "24AWG 15% CCA",
+   "25AWG 10% CCA",
+   "25AWG 15% CCA",
+   "26AWG 10% CCA",
+   "26AWG 15% CCA",
+   "27AWG 10% CCA",
+   "27AWG 15% CCA",
+   "28AWG 10% CCA",
+   "28AWG 15% CCA",
+   "29AWG 10% CCA",
+   "29AWG 15% CCA",
+   "30AWG 10% CCA",
+   "30AWG 15% CCA",
+   "31AWG 10% CCA",
+   "31AWG 15% CCA",
+   "32AWG 10% CCA",
+   "32AWG 15% CCA",
+   "33AWG 10% CCA",
+   "33AWG 15% CCA",
+   "34AWG 10% CCA",
+   "34AWG 15% CCA",
+   "35AWG 10% CCA",
+   "35AWG 15% CCA",
+   "36AWG 10% CCA",
+   "36AWG 15% CCA",
+   "37AWG 10% CCA",
+   "37AWG 15% CCA",
+   "38AWG 10% CCA",
+   "38AWG 15% CCA",
+   "39AWG 10% CCA",
+   "39AWG 15% CCA",
+   "40AWG 10% CCA",
+   "40AWG 15% CCA",
+   "41AWG 10% CCA",
+   "41AWG 15% CCA",
+   "42AWG 10% CCA",
+   "42AWG 15% CCA",
+   "43AWG 10% CCA",
+   "43AWG 15% CCA",
+   "44AWG 10% CCA",
+   "44AWG 15% CCA"
+  ],
+  "Folder: Cold Rolled Lamination Sheet": [
+   "Q-Core 18 mil",
+   "Q-Core 24 mil",
+   "Stator B 18 mil",
+   "Stator B 25 mil",
+   "Stator B SP 25 mil",
+   "Type 2-S 18 mil",
+   "Type 2-S 24 mil"
+  ],
+  "Folder: Metals Handbook DC Magnetization Curves": [
+   "3% Si strip, oriented",
+   "30% Ni-Fe temperature compensation alloy",
+   "416 stainless steel, annealed",
+   "4750 alloy",
+   "Carbon steel forgings, annealed",
+   "Cold drawn carbon steel, annealed",
+   "Cold rolled low carbon strip steel",
+   "Gray iron, as cast",
+   "Hot rolled low-carbon steel",
+   "Ingot iron, annealed",
+   "Malleable iron castings, as cast",
+   "Monel, annealed",
+   "Nodular cast iron",
+   "Perminvar (45% Ni - 25% Co)",
+   "Powdered iron, sintered and annealed",
+   "Pure nickel, annealed",
+   "Soft magnetic ferrite (Fe-Ni-Zn-V)",
+   "Steel castings, as cast",
+   "Supermendur"
+  ],
+  "Low-carbon steel (AISI 10xx etc.)": [
+   "1004 Steel (1400°F)",
+   "1004 Steel (hot rolled)",
+   "1006 Steel (1400°F)",
+   "1006 Steel (hot rolled)",
+   "1008 Steel (1400°F)",
+   "1008 Steel (hot rolled)",
+   "1010 Steel (1400°F)",
+   "1010 Steel (hot rolled)",
+   "1018 Steel (1400°F)",
+   "1018 Steel (hot rolled)",
+   "1020 Steel (1400°F)",
+   "1020 Steel (hot rolled)",
+   "1030 Steel (1400°F)",
+   "1030 Steel (hot rolled)",
+   "1117 Steel (1400°F)",
+   "1117 Steel (hot rolled)"
+  ],
+  "M-grade silicon steel": [
+   "M-14",
+   "M-15 14 mil",
+   "M-19",
+   "M-19 14 mil",
+   "M-22",
+   "M-22 14 mil",
+   "M-27",
+   "M-27 14 mil",
+   "M-36 14 mil",
+   "M-43 18 mil",
+   "M-43 and M-36",
+   "M-45 18 mil",
+   "M-47 18 mil",
+   "M-50"
+  ],
+  "NdFeB bonded": [
+   "BN1",
+   "BN10",
+   "BN2",
+   "BN3",
+   "BN4",
+   "BN5",
+   "BN6",
+   "BN7",
+   "BN8",
+   "BN9"
+  ],
+  "NdFeB sintered": [
+   "N30",
+   "N33",
+   "N35",
+   "N38",
+   "N40",
+   "N42",
+   "N45",
+   "N48",
+   "N50",
+   "N52",
+   "N55"
+  ],
+  "Nickel / permalloy alloys": [
+   "65 Permalloy, oriented",
+   "78 Permalloy",
+   "Deltamax, oriented",
+   "Moly-Permalloy",
+   "Monimax, nonoriented",
+   "Monimax, oriented",
+   "Mumetal",
+   "NiFe 48Ni, hydrogen anneal",
+   "NiFe 48Ni, mill anneal (as received)",
+   "NiFe 80Ni-4Mo, hydrogen anneal",
+   "NiFe 80Ni-5Mo, hydrogen anneal",
+   "Sinimax",
+   "Supermalloy",
+   "Vanadium Permendur"
+  ],
+  "Pure iron": [
+   "ARMCO Pure Iron",
+   "ARMCO Telar 57",
+   "Pure iron, annealed"
+  ],
+  "Round copper magnet wire": [
+   "0.125mm",
+   "0.16mm",
+   "0.25mm",
+   "0.2mm",
+   "0.315mm",
+   "0.4mm",
+   "0.5mm",
+   "0.63mm",
+   "0.8mm",
+   "1.25mm",
+   "1.6mm",
+   "10 AWG",
+   "10 SWG",
+   "12 AWG",
+   "12 SWG",
+   "14 AWG",
+   "14 SWG",
+   "16 AWG",
+   "16 SWG",
+   "18 AWG",
+   "18 SWG",
+   "1mm",
+   "2.5mm",
+   "20 AWG",
+   "20 SWG",
+   "22 AWG",
+   "22 SWG",
+   "24 AWG",
+   "24 SWG",
+   "26 AWG",
+   "26 SWG",
+   "28 AWG",
+   "28 SWG",
+   "2mm",
+   "30 AWG",
+   "30 SWG",
+   "32 AWG",
+   "32 SWG",
+   "34 AWG",
+   "34 SWG",
+   "36 AWG",
+   "36 SWG",
+   "38 SWG",
+   "40 SWG"
+  ],
+  "SmCo": [
+   "SmCo18(1:5)",
+   "SmCo20(1:5)",
+   "SmCo22(1:5)",
+   "SmCo24",
+   "SmCo24(1:5)",
+   "SmCo26",
+   "SmCo28",
+   "SmCo30",
+   "SmCo32"
+  ],
+  "Solid conductors": [
+   "Aluminum, 1100",
+   "Aluminum, 6061-T6",
+   "Copper",
+   "Titanium, CP Grade 1",
+   "Titanium, Ti-6Al-4V"
+  ],
+  "Stainless steel": [
+   "304 Stainless Steel",
+   "316 Stainless Steel",
+   "Stainless 12Cr ferritic, annealed",
+   "Stainless 15-5 PH, Condition A",
+   "Stainless 15-5 PH, H 1075/H 1100",
+   "Stainless 15-5 PH, H 1150",
+   "Stainless 15-5 PH, H 900",
+   "Stainless 17-4 PH, Condition A",
+   "Stainless 17-4 PH, H 1075/H 1100",
+   "Stainless 17-4 PH, H 1150",
+   "Stainless 17-4 PH, H 900",
+   "Stainless 410, annealed",
+   "Stainless 416, annealed",
+   "Stainless 420, annealed",
+   "Stainless 430F, annealed",
+   "Stainless 430FR, annealed",
+   "Stainless 430FR, cold drawn",
+   "Stainless 446, annealed",
+   "Stainless PH 13-8 Mo, H 950"
+  ]
+ },
+ "grade_families": {
+  "1004": [
+   "1004 Steel (1400°F)",
+   "1004 Steel (hot rolled)"
+  ],
+  "1006": [
+   "1006 Steel (1400°F)",
+   "1006 Steel (hot rolled)"
+  ],
+  "1008": [
+   "1008 Steel (1400°F)",
+   "1008 Steel (hot rolled)"
+  ],
+  "1010": [
+   "1010 Steel (1400°F)",
+   "1010 Steel (hot rolled)"
+  ],
+  "1018": [
+   "1018 Steel (1400°F)",
+   "1018 Steel (hot rolled)"
+  ],
+  "1020": [
+   "1020 Steel (1400°F)",
+   "1020 Steel (hot rolled)"
+  ],
+  "1030": [
+   "1030 Steel (1400°F)",
+   "1030 Steel (hot rolled)"
+  ],
+  "1117": [
+   "1117 Steel (1400°F)",
+   "1117 Steel (hot rolled)"
+  ],
+  "4750": [
+   "4750 alloy"
+  ],
+  "BN1": [
+   "BN1"
+  ],
+  "BN10": [
+   "BN10"
+  ],
+  "BN2": [
+   "BN2"
+  ],
+  "BN3": [
+   "BN3"
+  ],
+  "BN4": [
+   "BN4"
+  ],
+  "BN5": [
+   "BN5"
+  ],
+  "BN6": [
+   "BN6"
+  ],
+  "BN7": [
+   "BN7"
+  ],
+  "BN8": [
+   "BN8"
+  ],
+  "BN9": [
+   "BN9"
+  ],
+  "M-14": [
+   "M-14"
+  ],
+  "M-15": [
+   "M-15 14 mil"
+  ],
+  "M-19": [
+   "M-19",
+   "M-19 14 mil"
+  ],
+  "M-22": [
+   "M-22",
+   "M-22 14 mil"
+  ],
+  "M-27": [
+   "M-27",
+   "M-27 14 mil"
+  ],
+  "M-36": [
+   "M-36 14 mil"
+  ],
+  "M-43": [
+   "M-43 18 mil",
+   "M-43 and M-36"
+  ],
+  "M-45": [
+   "M-45 18 mil"
+  ],
+  "M-47": [
+   "M-47 18 mil"
+  ],
+  "M-50": [
+   "M-50"
+  ],
+  "N30": [
+   "N30"
+  ],
+  "N33": [
+   "N33"
+  ],
+  "N35": [
+   "N35"
+  ],
+  "N38": [
+   "N38"
+  ],
+  "N40": [
+   "N40"
+  ],
+  "N42": [
+   "N42"
+  ],
+  "N45": [
+   "N45"
+  ],
+  "N48": [
+   "N48"
+  ],
+  "N50": [
+   "N50"
+  ],
+  "N52": [
+   "N52"
+  ],
+  "N55": [
+   "N55"
+  ],
+  "SmCo18": [
+   "SmCo18(1:5)"
+  ],
+  "SmCo20": [
+   "SmCo20(1:5)"
+  ],
+  "SmCo22": [
+   "SmCo22(1:5)"
+  ],
+  "SmCo24": [
+   "SmCo24",
+   "SmCo24(1:5)"
+  ],
+  "SmCo26": [
+   "SmCo26"
+  ],
+  "SmCo28": [
+   "SmCo28"
+  ],
+  "SmCo30": [
+   "SmCo30"
+  ],
+  "SmCo32": [
+   "SmCo32"
+  ],
+  "Y26H": [
+   "Y26H",
+   "Y26H-2"
+  ],
+  "Y27H": [
+   "Y27H"
+  ],
+  "Y28H": [
+   "Y28H-1"
+  ],
+  "Y30": [
+   "Y30"
+  ],
+  "Y30BH": [
+   "Y30BH"
+  ],
+  "Y30H": [
+   "Y30H-1",
+   "Y30H-2"
+  ],
+  "Y32": [
+   "Y32"
+  ],
+  "Y33": [
+   "Y33"
+  ],
+  "Y33H": [
+   "Y33H"
+  ],
+  "Y34": [
+   "Y34"
+  ],
+  "Y35": [
+   "Y35"
+  ],
+  "Y36": [
+   "Y36"
+  ],
+  "Y38": [
+   "Y38"
+  ]
+ },
+ "rename_check_substrings": {
+  "M-19": [
+   "M-19",
+   "M-19 14 mil"
+  ],
+  "M-45": [
+   "M-45 18 mil"
+  ],
+  "1010": [
+   "1010 Steel (1400°F)",
+   "1010 Steel (hot rolled)"
+  ],
+  "NdFeB": [],
+  "N4": [
+   "BN4",
+   "N40",
+   "N42",
+   "N45",
+   "N48"
+  ],
+  "SmCo": [
+   "SmCo18(1:5)",
+   "SmCo20(1:5)",
+   "SmCo22(1:5)",
+   "SmCo24",
+   "SmCo24(1:5)",
+   "SmCo26",
+   "SmCo28",
+   "SmCo30",
+   "SmCo32"
+  ],
+  "Alnico": [
+   "Cast Alnico 2 (LNG12)",
+   "Cast Alnico 3 (LNG10)",
+   "Cast Alnico 5 (LNG37)",
+   "Cast Alnico 5 (LNG40)",
+   "Cast Alnico 5 (LNG44)",
+   "Cast Alnico 5-7 (LNG56)",
+   "Cast Alnico 6 (LNGT28)",
+   "Cast Alnico 8 (LNGT32)",
+   "Cast Alnico 8 (LNGT38)",
+   "Cast Alnico 8 (LNGT44)",
+   "Cast Alnico 9 (LNGT72)",
+   "Sintered Alnico 2 (FLNG12)",
+   "Sintered Alnico 5 (FLNG34)",
+   "Sintered Alnico 8 (FLNGT38)"
+  ],
+  "Ceramic": [
+   "Ceramic 1",
+   "Ceramic 5",
+   "Ceramic 7",
+   "Ceramic 8A",
+   "Ceramic 8B"
+  ],
+  "Copper": [
+   "Copper"
+  ],
+  "Aluminum": [
+   "Aluminum, 1100",
+   "Aluminum, 6061-T6"
+  ],
+  "Air": [
+   "Air"
+  ]
+ },
+ "fem42_favourites": {
+  "M-19 Steel": {
+   "fem42_name_status": "absent from matlib.dat; still used as an embedded block in examples (CoggingTorque.fem, lrk.fem, ThrustBearing.fem, my_SPM_motor_AGB.fem)",
+   "fem5_candidates": [
+    "M-19 14 mil",
+    "M-19"
+   ],
+   "note": "Closest lamination grade is 'M-19 14 mil' (Soft Magnetic Materials / Silicon Iron, 61 BH points, Sigma 1.923 MS/m, d_lam 0.3556 mm). 'M-19' is the Metals Handbook DC curve (33 BH points, Sigma 2.03)."
+  },
+  "Pure Iron": {
+   "fem42_name_status": "not an exact match in matlib.dat",
+   "fem5_candidates": [
+    "ARMCO Pure Iron",
+    "Pure iron, annealed"
+   ],
+   "note": "'ARMCO Pure Iron' (74 BH points) is the commercially pure iron entry; 'Pure iron, annealed' is the Metals Handbook curve."
+  },
+  "1010 Steel": {
+   "fem42_name_status": "not an exact match; FEMM 5 names carry a suffix",
+   "fem5_candidates": [
+    "1010 Steel (hot rolled)",
+    "1010 Steel (1400°F)"
+   ],
+   "note": "Use '1010 Steel (hot rolled)' unless an annealed curve is wanted."
+  },
+  "NdFeB 32 MGOe": {
+   "fem42_name_status": "absent from matlib.dat; embedded in examples (CoggingTorque.fem) with H_c = 883310 A/m, Mu 1.045, Sigma 0.694 MS/m",
+   "fem5_candidates": [
+    "N33",
+    "N30"
+   ],
+   "note": "No N32 grade in matlib. Embedded H_c 883310 A/m lies between N30 (836420) and N33 (878619); nearest library entry is N33 (or N30). Confirm before substituting."
+  },
+  "Air": {
+   "fem42_name_status": "exact match",
+   "fem5_candidates": [
+    "Air"
+   ],
+   "note": "Unchanged."
+  },
+  "Copper": {
+   "fem42_name_status": "exact match in matlib.dat (Solid Non-Magnetic Conductors, Sigma 58 MS/m)",
+   "fem5_candidates": [
+    "Copper"
+   ],
+   "note": "Unchanged. Other copper entries: 'Copper (IACS standard)' in condlib.dat, 'Copper, Pure' in heatlib.dat."
+  },
+  "18 AWG": {
+   "fem42_name_status": "exact match in matlib.dat (Copper AWG Magnet Wire)",
+   "fem5_candidates": [
+    "18 AWG"
+   ],
+   "note": "Unchanged."
+  }
+ },
+ "caveat": "FEMM 4.2 names were supplied from memory of the FEMM 4.2 library and are checked only against the example .fem files shipped in C:/femm-qt/examples. The FEMM 4.2 library itself is not in the installation."
+}
