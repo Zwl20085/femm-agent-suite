@@ -130,6 +130,7 @@ def build_ccore(link, path: str, *, gap: float = 1.0, core_width: float = 10.0, 
         "kind": "ccore", "path": str(path), "units": "millimeters", "depth_mm": depth,
         "groups": {"armature": 1, "core": 2, "coil": 3}, "circuits": ["coil"], "turns": turns, "current": current,
         "gap_mm": g, "iron": iron_name, "linear": iron.startswith("linear:"),
+        "iron_path_mm": l_fe, "core_area_m2": area, "mu_r": mu_r,
         "probe_gap_point": [x0 - w / 2, H + g / 2],
         "estimate": {
             "gap_B_T": bg,

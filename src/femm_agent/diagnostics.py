@@ -129,8 +129,11 @@ def run(link, model_path: str, checks: Sequence[str] | None = None, *, rotor_gro
         if stator_groups:
             ts = as_float(ops.block_integral(BI_TORQUE, stator_groups))
             facts["torque_stator_Nm"] = ts
-            out.append(health.force_consistency(tr, -ts, "rotor WST torque", "-(stator WST torque)", 0.05,
-                                                scale=max(abs(tr), abs(ts), 1e-3), name="torque_action_reaction"))
+            chk = health.force_consistency(tr, -ts, "rotor WST torque", "-(stator WST torque)", 0.05,
+                                           scale=max(abs(tr), abs(ts), 1e-3), name="torque_action_reaction")
+            chk["message"] += (" [weak check when the two selections are complementary: the WST weights are then"
+                               " 1 - w of each other; use virtual work (torque vs angle) for an independent check]")
+            out.append(chk)
         ages = [b.get("BdryName") for b in model.boundaries() if int(b.get("BdryType", 0) or 0) in (6, 7)]
         for a in ages:
             tg = as_float(_first(ops.gap_integral(a, 0)))

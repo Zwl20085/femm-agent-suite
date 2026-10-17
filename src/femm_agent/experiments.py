@@ -337,7 +337,7 @@ def force_vs_position(link, groups: Sequence[int], dx: float = 0.0, dy: float = 
     for r, v in zip(rows, vw):
         r.insert(4, v)
     if steps >= 3:
-        run.checks.append(health.curve_consistency(f_par[1:-1], vw[1:-1], "WST force", "virtual work dW'/ds",
+        run.checks.append(health.curve_consistency(f_par, vw, "WST force", "virtual work dW'/ds",
                                                    tolerance, name="force_wst_vs_virtual_work"))
     if estimate_fn is not None:
         est = [estimate_fn(p) for p in pos]
@@ -474,7 +474,7 @@ def torque_vs_angle(link, rotate_groups: Sequence[int] = (1,), *, angles: Sequen
     if drive:
         cols += [f"i_{c}_A" for c in circuits]
     if not drive and len(angs) >= 3:
-        run.checks.append(health.curve_consistency(tq[1:-1], vw[1:-1], "torque", "virtual work dW'/dtheta", tolerance,
+        run.checks.append(health.curve_consistency(tq, vw, "torque", "virtual work dW'/dtheta", tolerance,
                                                    name="torque_vs_virtual_work"))
     gaps = [r.get("torque_gap") for r in recs]
     if method == "rotate" and all(g is not None for g in gaps):
@@ -542,7 +542,7 @@ def cogging(link, rotate_groups: Sequence[int] = (1,), *, slots: int, poles: int
     run.checks.append(health.zero_mean(one))
     run.checks.append(health.periodicity(tq, len(tq) - 1, 0.1, name="cogging_periodic"))
     if method == "rotate" and len(tq) >= 3:
-        run.checks.append(health.curve_consistency(tq[1:-1], vw[1:-1], "WST", "virtual work", 0.15,
+        run.checks.append(health.curve_consistency(tq, vw, "WST", "virtual work", 0.15,
                                                    name="cogging_vs_virtual_work"))
     top = sorted(((a, o) for o, a in zip(h["order"][1:], h["amplitude"][1:])), reverse=True)[:5]
     summary = {"peak_to_peak_Nm": pp, "rms_Nm": math.sqrt(sum(t * t for t in one) / len(one)),
@@ -950,8 +950,6 @@ def bh_check(link, *, out_dir=None, restore_path=None, min_fraction: float = 0.2
     flux density along the magnetisation direction B_m, the field H_m = B_m/(mu0 mu_r) - Hc (linear
     magnets) or from the B-H curve, the permeance coefficient Pc = -B_m/(mu0 H_m) and B_m/Br.
     Health: every magnet keeps min B_m >= ``min_fraction`` * Br (demagnetisation risk)."""
-    import numpy as np
-
     run = Run(link, "bh_check", out_dir, restore_path, solve_timeout, tag)
     ops = run.ops
     ops.solve()

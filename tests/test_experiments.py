@@ -262,5 +262,5 @@ def test_live_coilgun_axisymmetric(link, tmp_path):
     r = ex.force_vs_position(link, [1], dy=-0.1, steps=12, out_dir=tmp_path)
     f = [row[2] for row in r["rows"]]
     assert abs(f[0]) < 0.05 * max(abs(x) for x in f)    # no axial force with the slug centred
-    assert min(f) < 0                                   # pulled back towards the centre (-z offset -> +z force? sign)
+    assert min(f[1:]) > 0                               # slug moved to -z is pulled back towards the centre (+z)
     assert {c["name"]: c for c in r["health"]}["force_wst_vs_virtual_work"]["ok"]

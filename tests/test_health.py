@@ -74,7 +74,7 @@ def test_force_and_virtual_work():
     k = 1234.0
     w = [0.5 * k * x * x for x in xs]
     f = health.virtual_work_derivative(xs, w)
-    assert f[1:-1] == pytest.approx([k * x for x in xs[1:-1]])
+    assert f == pytest.approx([k * x for x in xs], abs=1e-9)  # exact for a quadratic, ends included
     assert health.curve_consistency([k * x for x in xs[1:-1]], f[1:-1], "wst", "vw")["ok"] is True
     assert health.force_consistency(0.001, 0.0, scale=1.0)["ok"] is True
     assert health.force_consistency(1.0, 0.5)["ok"] is False

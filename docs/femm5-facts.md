@@ -334,3 +334,97 @@ building and testing the core tool groups (`tests/live/`). Tags as above: everyt
 
 Resolves from section 9: the `ei_/hi_/ci_getprobleminfo` layout, three `mi_modifymaterial` indices,
 and the `xo_makeplot` return value.
+
+## Verified by the engineering build
+
+Observed live on FEMM 5 build 06oct2026 (Windows, `femm_headlessw.exe`) while building the
+experiments, health rules and file parser. Numbers come from `tests/test_experiments.py`,
+`tests/test_health.py` (`-m live`) and `examples/`.
+
+**Solution files (.ans and the other physics)**
+
+- The element order in the `.ans` `[Solution]` section is the order of `mo_getallelements`; node
+  indices are 0-based in the file and 1-based over IPC. Element B computed from the nodal A of a
+  planar `.ans` (Bx = dA/dy, By = -dA/dx, coordinates in metres) matches `mo_getallb` to print
+  precision, so the `.ans` element -> block-label column can be combined with live bulk arrays.
+- DC magnetostatic node rows have 4 columns; element rows have 8 (DC) or 7 (time-harmonic) columns.
+  The three edge columns are 0-based indices into `[BdryProps]`, -1 for none.
+- `.res`, `.anh`, `.anc` written by `ei_/hi_/ci_analyze` parse with the same reader: node rows have
+  4, 4 and 5 columns, element rows 4.
+- A block label given the material `"<No Mesh>"` is saved as a `[NumHoles]` row, not a block label.
+- `mi_makeABC(n, R, x, y, 0)` adds a Dirichlet boundary named `A=0` (BdryType 0) and n shell
+  materials `u1`..`un` with labels. The field inside the shells is not physical, so "field at the
+  outer boundary is small" must not be judged inside them.
+
+**Commands**
+
+- `mo_getb`, `mo_geta`, `mo_geth`, `mo_getj`, `mo_getmu` are pyFEMM-side helpers: over IPC they
+  answer `name 'mo_getb' isn't defined`. Use `mo_getpointvalues`.
+- `mi_createmesh()` returns nothing over IPC (not the element count); use `mo_numelements` after a solve.
+- `mo_groupselectblock(n)` calls accumulate (several groups can be selected before one
+  `mo_blockintegral`); `mi_selectgroup(n)` clears the previous selection.
+- `mo_close()` after each step of a sweep is accepted and the next `mi_analyze` +
+  `mi_loadsolution` work normally. `mi_close()` followed by `opendocument(path)` works headless.
+- A multi-line MicroPython snippet runs per case via `exec(open("<path>").read())`.
+- `mi_smartmesh(0)` before meshing cut the SPM benchmark from 33.5k to 9.7k elements (same field to
+  about 0.2 % in the gap, same flux linkage to 0.2 %).
+- Rotating a group by +a and then -a leaves node coordinates rounded slightly differently, and the
+  re-meshed model had 9786 instead of 9676 elements. Re-solve after restoring a swept geometry.
+
+**Block integrals and forces**
+
+- Linear C-core: block integral 2 (energy) = 17 (coenergy) = 1/2 psi I from
+  `mo_getcircuitproperties` to all printed digits (0.0149452 J at 2 A).
+- Weighted stress tensor force (18/19) vs virtual work dW'/dx from coenergy (17): 1.6 % RMS on the
+  C-core over 1-3 mm gaps, 5 % on the axisymmetric coilgun (19 is the z-force there). WST torque
+  (22) vs dW'/dtheta: 6.6 % RMS for cogging with 2 deg steps.
+- The WST torque of a group and of its complement are equal and opposite almost by construction
+  (complementary weights), so that is a weak check; virtual work is the independent one.
+- `mo_getcircuitproperties` flux linkage includes turns and depth. For a series circuit with +N
+  and -N turn labels the parser's net-turns sum is 0, which is correct.
+
+**Periodic air-gap element (BdryFormat 6)**
+
+- Geometry that works: two concentric circles (each two 180 deg arcs) carrying the same
+  BdryFormat 6 boundary, with a `"<No Mesh>"` label in the thin annulus between them. Without that
+  label the solver fails with `a region has no material assigned`.
+- `mi_modifyboundprop("AGE", 10, angle)` rotates the inner side (the rotor) by `angle` degrees and
+  the mesh does not change between steps. `mo_gapintegral("AGE", 0)` returns the torque as one value.
+- The WST block integral (22) on the rotor reads about 1e-16 N*m across an air-gap element. Use
+  `mo_gapintegral` for torque with this route.
+- Against the rotate-and-re-mesh route on the same 12-slot / 4-pole SPM: cogging peak to peak
+  0.3835 vs 0.3824 N*m (0.3 %), back-EMF fundamental 9.977 vs 9.973 V. Each step took 0.19 s vs
+  0.15 s (the rotate figure includes re-meshing).
+- Not exercised: antiperiodic air gap (BdryFormat 7), the outer-angle property (propnum 11),
+  `mo_getgapharmonics` / `mo_getallgapb` in the experiments.
+
+**Accuracy against analytic references**
+
+- C-core (planar, linear iron mu_r 2000, two 1 mm gaps): gap B 0.238 T vs 0.2405 T; force -9.74 N vs
+  -9.21 N (two-gap B^2 A / 2 mu0); L 7.47 mH vs 4.81 mH (the formula ignores fringing and slot leakage).
+- Thick solenoid (coilgun coil, inches, axisymmetric, ABC R = 4 in): centre B 0.2305 T vs 0.2289 T (+0.7 %).
+- Round copper wire (r 5 mm, A = 0 at 50 mm, 1 m deep): L_dc 0.509 uH vs 0.5105 uH; R(f) vs the
+  exact Bessel internal impedance: 0.0 % at 1-100 Hz, 0.1 % at 1 kHz, 0.4 % at 3 kHz, 1.3 % at
+  10 kHz (0.25 mm mesh, skin depth 0.66 mm). 1/2 Re(V conj I) equals block integral 6 (total
+  losses) to 0.00 %, so circuit phasors are peak amplitudes.
+- SPM (N42 linear, mu_r 1.05, Hc 994529 A/m -> Br 1.312 T): gap B 0.862 T vs 0.843 T
+  (Br lm / (lm + mu_r kc g)); PM flux-linkage fundamental 47.6 mWb vs 51.0 mWb (flat-gap
+  estimate); Ld 0.427 mH, Lq 0.421 mH; mutual inductances reciprocal to 0.4 %. Mean torque at
+  iq = 10 A was 1.415 N*m against 1.428 N*m from 3/2 p (psi_d iq - psi_q id) with the FEM flux
+  linkages (0.2 %). At a single rotor position the dq formula is off by 12 % because the EMF has
+  27 % THD. Magnet operating point B_m/Br 0.70, Pc 2.5.
+- Library materials used: `N42` is linear (no B-H points); `M-19 14 mil` is nonlinear with
+  sigma 1.923 MS/m; `Copper` is 58 MS/m.
+
+**Timings (this machine)**
+
+- Engine launch about 0.55 s. Solves: 15k-element planar C-core 0.13-0.20 s, 9.7k-element SPM about
+  0.15 s per rotor step including re-mesh, 10.7k-element AC wire 0.13 s.
+- Full SPM example (cogging with 2 methods, back-EMF, Ld/Lq, loaded torque, PM check, report, about
+  130 solves): 24.5 s. Live engineering tests: about 20 s.
+
+**Concurrency**
+
+- If another client is already connected to an engine's port, a second connect gets
+  `femm-qt is already connected to another client`. Tests and examples pick their own free port
+  (`ipc.pick_free_port(49xxx)`) so that they can run next to other sessions.

@@ -246,21 +246,20 @@ def curve_consistency(a: Sequence[float], b: Sequence[float], label_a: str, labe
 
 
 def virtual_work_derivative(positions: Sequence[float], coenergy: Sequence[float]) -> list[float]:
-    """Central-difference dW'/dx (one-sided at the ends). Positions in metres (or radians for torque)."""
+    """dW'/dx at every sample: second-order central differences inside, second-order one-sided at the
+    ends (``numpy.gradient(..., edge_order=2)``; works for uneven spacing). Positions in metres (or
+    radians for torque). Fewer than 3 samples fall back to a single difference."""
     x = list(map(float, positions))
     w = list(map(float, coenergy))
     n = len(x)
     if n < 2:
         return [float("nan")] * n
-    out = []
-    for i in range(n):
-        if i == 0:
-            out.append((w[1] - w[0]) / (x[1] - x[0]))
-        elif i == n - 1:
-            out.append((w[-1] - w[-2]) / (x[-1] - x[-2]))
-        else:
-            out.append((w[i + 1] - w[i - 1]) / (x[i + 1] - x[i - 1]))
-    return out
+    if n == 2:
+        d = (w[1] - w[0]) / (x[1] - x[0])
+        return [d, d]
+    import numpy as np
+
+    return np.gradient(np.asarray(w), np.asarray(x), edge_order=2).tolist()
 
 
 def torque_ripple(torque: Sequence[float]) -> dict:
