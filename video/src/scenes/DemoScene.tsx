@@ -7,7 +7,7 @@ const PROMPT = "Build a 12-slot 4-pole SPM, run cogging and back-EMF, prove the 
 
 // Tool calls and the numbers they returned on FEMM 5 build 06oct2026 (docs/femm5-facts.md).
 const LOG: [string, string][] = [
-  ['femm_session_open(physics="magnetics")', "engine up in 0.55 s"],
+  ['femm_new_document(physics="magnetics")', "magnetics doc, engine 0.55 s"],
   ['femm_build_benchmark(kind="spm")', "12 slots, 4 poles, A/B/C"],
   ['femm_material_search("NdFeB 42")', "N42, Br 1.312 T"],
   ["femm_solve()", "9.7k elements, 0.15 s"],
@@ -34,7 +34,7 @@ const LogLine: React.FC<{ call: string; result: string; at: number; last: boolea
   return (
     <div style={{ display: "flex", fontFamily: MONO, fontSize: 21, lineHeight: "36px", whiteSpace: "nowrap" }}>
       <span style={{ color: C.dim, width: 26 }}>{">"}</span>
-      <span style={{ color: C.text, width: 560, overflow: "hidden" }}>
+      <span style={{ color: C.text, width: 560, flexShrink: 0, overflow: "hidden" }}>
         {typed}
         {!done && last ? <Cursor /> : null}
       </span>
