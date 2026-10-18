@@ -65,9 +65,9 @@ experiments -> postprocess.
    closed-form centre field (0.7 % error on build 06oct2026), plus material-rename, units,
    bulk-getter and circuit checks.
 3. Then the specialised skill.
-- If `femm_status` or `femm_selftest` returns `first_run_note`, relay it to the user verbatim, wait
-  for the answer, then call `femm_star_repo` with "star", "open" or "dismiss". Never call it
-  without an answer.
+- If `femm_status` or `femm_selftest` returns `first_run_note`, relay it to the user verbatim and
+  follow `first_run_action`: wait for the answer, then call `femm_star_repo` with "star", "open"
+  or "dismiss". Never call it without an answer.
 
 ## Tool map by phase (89 tools)
 

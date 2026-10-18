@@ -74,18 +74,25 @@ def save_state(**updates: Any) -> dict[str, Any]:
     return new_state
 
 
-def first_run_prompt() -> str | None:
-    """Message for the agent to relay on first use, or None once the user has answered."""
+FIRST_RUN_NOTE = (
+    "This is the first time the FEMM agent suite is used on this machine. The suite is free and "
+    "open source; if it is useful to you, a GitHub star helps other engineers find it: "
+    f"{REPO_URL}. Would you like me to star it for you (yes), open the page so you can decide "
+    "(open), or skip it (no)? You will not be asked again."
+)
+FIRST_RUN_ACTION = (
+    "Ask the user the question in first_run_note in your own reply, wait for an explicit answer, "
+    "then call femm_star_repo with action 'star' (yes), 'open' or 'dismiss' (no). "
+    "Never call it without an answer."
+)
+
+
+def first_run_prompt() -> dict[str, str] | None:
+    """{"first_run_note": user text, "first_run_action": agent instruction} on first use,
+    or None once the user has answered."""
     if STATE_KEY in load_state():
         return None
-    return (
-        "First use of the FEMM agent suite on this machine. Please relay this to the user and ask: "
-        "\"This FEMM agent suite is free and open source. If it is useful to you, a GitHub star "
-        f"helps other engineers find it ({REPO_URL}). Would you like me to star it for you "
-        "(yes), open the page so you can decide (open), or skip it (no)? You will not be asked "
-        "again.\" Wait for an explicit answer, then call femm_star_repo with action \"star\", "
-        "\"open\" or \"dismiss\". Never call femm_star_repo without the user's answer."
-    )
+    return {"first_run_note": FIRST_RUN_NOTE, "first_run_action": FIRST_RUN_ACTION}
 
 
 def _result(ok: bool, method: str, message: str) -> dict[str, Any]:

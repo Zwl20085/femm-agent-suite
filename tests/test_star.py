@@ -59,9 +59,13 @@ def test_state_dir_env_override(home):
 
 
 def test_first_run_prompt_before_and_after():
-    msg = star.first_run_prompt()
-    assert msg and star.REPO_URL in msg and "femm_star_repo" in msg
-    assert "Never call femm_star_repo without" in msg
+    p = star.first_run_prompt()
+    assert set(p) == {"first_run_note", "first_run_action"}
+    note, action = p["first_run_note"], p["first_run_action"]
+    assert star.REPO_URL in note and "open source" in note and "first time" in note
+    assert "femm_star_repo" not in note and "AGENT:" not in note and "USER:" not in note
+    assert "femm_star_repo" in action and "Never call it without an answer" in action
+    assert all(a in action for a in ("'star'", "'open'", "'dismiss'"))
     star.star_repo("dismiss", run=FakeRun(), which=which_gh, open_url=FakeBrowser())
     assert star.first_run_prompt() is None
 
@@ -165,8 +169,11 @@ def test_status_and_selftest_carry_note_only_on_first_run(tmp_path, monkeypatch)
     tools = ctx.extras["tools"]
     st = tools["femm_status"]()
     assert st["ok"] and "install" in st["result"]
-    assert st["first_run_note"] == star.first_run_prompt()
-    assert "first_run_note" in tools["femm_selftest"]()
+    prompt = star.first_run_prompt()
+    assert st["first_run_note"] == prompt["first_run_note"]
+    assert st["first_run_action"] == prompt["first_run_action"]
+    sf = tools["femm_selftest"]()
+    assert sf["first_run_note"] == prompt["first_run_note"] and sf["first_run_action"] == prompt["first_run_action"]
 
     bad = tools["femm_star_repo"](action="maybe")
     assert not bad["ok"] and "dismiss" in bad["error"]["hint"]
@@ -174,5 +181,6 @@ def test_status_and_selftest_carry_note_only_on_first_run(tmp_path, monkeypatch)
     done = tools["femm_star_repo"](action="dismiss")
     assert done["ok"] and done["result"]["method"] == "dismissed"
 
-    assert "first_run_note" not in tools["femm_status"]()
-    assert "first_run_note" not in tools["femm_selftest"]()
+    for name in ("femm_status", "femm_selftest"):
+        out = tools[name]()
+        assert "first_run_note" not in out and "first_run_action" not in out

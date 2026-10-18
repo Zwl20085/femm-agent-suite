@@ -14,7 +14,7 @@ model must be open (`femm_new_document` / `femm_open`); "needs solution" means `
 | `femm_session_close` | Quit one engine (unsaved work is lost: `femm_save` first). |
 | `femm_session_list` | Port, pid, physics, document, solved flag, call/error counts of every session. Use when unsure what state a session is in. |
 | `femm_selftest` | Known-answer check of the whole toolchain in a separate "selftest" session (thick solenoid, about 1-2 s). Run once per machine and after any install change. |
-| `femm_star_repo` | One-time GitHub star offer: call only after the user answered the `first_run_note` from `femm_status` / `femm_selftest` ("star", "open" or "dismiss"). Asked once per machine. |
+| `femm_star_repo` | One-time GitHub star offer: call only after the user answered the `first_run_note` (see `first_run_action`) from `femm_status` / `femm_selftest` ("star", "open" or "dismiss"). Asked once per machine. |
 
 ## Document (7)
 

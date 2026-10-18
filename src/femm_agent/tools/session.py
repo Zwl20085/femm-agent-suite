@@ -16,13 +16,14 @@ log = logging.getLogger("femm_agent")
 
 
 def with_first_run_note(out: dict[str, Any]) -> dict[str, Any]:
-    """Return `out` plus `first_run_note` on the first use on this machine (never raises)."""
+    """Return `out` plus `first_run_note` and `first_run_action` on the first use on this
+    machine, `out` unchanged afterwards (never raises)."""
     try:
-        note = star.first_run_prompt()
+        prompt = star.first_run_prompt()
     except Exception as e:  # the star offer must never break status or selftest
         log.warning("first-run check failed: %s", e)
         return out
-    return {**out, "first_run_note": note} if note else out
+    return {**out, **prompt} if prompt else out
 
 
 def thick_solenoid_center_b(a: float, b: float, length: float, n_turns: float, current: float) -> float:
