@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- One-time, opt-in GitHub star offer: on first use `femm_status` / `femm_selftest` carry a
+  `first_run_note`; new tool `femm_star_repo` ("star" via the `gh` CLI with a browser fallback,
+  "open", "dismiss") records the answer in `state.json` under `FEMM_AGENT_HOME` and never asks again.
+
 ## 0.1.0 (2026-10-17)
 
 First release, built against FEMM 5.0 build 06oct2026.

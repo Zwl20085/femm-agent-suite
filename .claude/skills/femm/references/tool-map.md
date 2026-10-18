@@ -1,11 +1,11 @@
-# Tool map: all 88 femm_* tools
+# Tool map: all 89 femm_* tools
 
 Every tool takes `session` (default `"main"`) unless noted as offline, and returns the envelope
 `{"ok", "result" | "error": {"message", "hint"}, "session", "seconds"}`. "Needs document" means a
 model must be open (`femm_new_document` / `femm_open`); "needs solution" means `femm_solve` or
 `femm_load_solution` ran since the last change.
 
-## Session (5)
+## Session (6)
 
 | Tool | When / why |
 |---|---|
@@ -14,6 +14,7 @@ model must be open (`femm_new_document` / `femm_open`); "needs solution" means `
 | `femm_session_close` | Quit one engine (unsaved work is lost: `femm_save` first). |
 | `femm_session_list` | Port, pid, physics, document, solved flag, call/error counts of every session. Use when unsure what state a session is in. |
 | `femm_selftest` | Known-answer check of the whole toolchain in a separate "selftest" session (thick solenoid, about 1-2 s). Run once per machine and after any install change. |
+| `femm_star_repo` | One-time GitHub star offer: call only after the user answered the `first_run_note` from `femm_status` / `femm_selftest` ("star", "open" or "dismiss"). Asked once per machine. |
 
 ## Document (7)
 

@@ -12,7 +12,7 @@ flow and current flow, and show you the physics checks that prove each number.**
 ![Python](https://img.shields.io/badge/python-3.10%2B-3776AB)
 ![FEMM](https://img.shields.io/badge/FEMM-5.0-0b6e99)
 ![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-555)
-![Tools](https://img.shields.io/badge/MCP%20tools-88-6f42c1)
+![Tools](https://img.shields.io/badge/MCP%20tools-89-6f42c1)
 ![Skills](https://img.shields.io/badge/Claude%20skills-11-ff7b00)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -78,7 +78,7 @@ An agent still cannot just "call FEMM". It needs:
   the four material libraries, and a record of FEMM 5 behaviour verified live.
 
 This suite is meant as the golden-standard library a future finite element workflow can build on:
-an [MCP](https://modelcontextprotocol.io) server with 88 tools, a pure-Python engineering layer
+an [MCP](https://modelcontextprotocol.io) server with 89 tools, a pure-Python engineering layer
 (health rules, estimates, experiments, file parser), and eleven
 [Claude skills](https://docs.claude.com/en/docs/claude-code/skills) that teach the agent how a
 FEMM user works and when not to trust a number.
@@ -148,11 +148,11 @@ The console script `femm-mcp` is the same server.
 
 ## Tool groups
 
-88 tools in 12 groups. One line per tool: [`.claude/skills/femm/references/tool-map.md`](.claude/skills/femm/references/tool-map.md).
+89 tools in 12 groups. One line per tool: [`.claude/skills/femm/references/tool-map.md`](.claude/skills/femm/references/tool-map.md).
 
 | Group | Tools | Headline tools |
 |---|---:|---|
-| session | 5 | `femm_status`, `femm_session_open`, `femm_selftest` |
+| session | 6 | `femm_status`, `femm_session_open`, `femm_selftest` |
 | document | 7 | `femm_new_document`, `femm_open`, `femm_save`, `femm_problem_define` |
 | geometry | 18 | `femm_draw_polygon`, `femm_add_arcs`, `femm_select`, `femm_copy_selected`, `femm_import_dxf`, `femm_geometry_summary` |
 | properties | 10 | `femm_add_block_label`, `femm_add_boundary`, `femm_add_circuit`, `femm_add_conductor` |
@@ -203,7 +203,7 @@ proving a 12-slot / 4-pole motor, the validation table, the skills and the insta
 MCP client (Claude Code, ...)
    |  stdio
    v
-femm_agent.server  ---- 12 tool groups, 88 tools, envelope {ok, result | error{message, hint}}
+femm_agent.server  ---- 12 tool groups, 89 tools, envelope {ok, result | error{message, hint}}
    |-- sessions.py      named FEMM engines: port, pid, physics, open document, solved flag, work dir
    |     `-- ipc.py     FemmLink: TCP 127.0.0.1, one MicroPython line per request, reply parsing,
    |                    timeouts, journal of every line sent (no pyFEMM import needed)
@@ -328,6 +328,13 @@ registered. Repository layout:
 
 Contributions: see [`CONTRIBUTING.md`](CONTRIBUTING.md). Only document behaviour observed on a real
 FEMM 5, and mark the rest unverified.
+
+## Support the project
+
+On first use on a machine, `femm_status` / `femm_selftest` ask the agent to offer you a GitHub star
+for this repository. It is opt-in and asked once: the agent stars it (via `gh`, else it opens the
+page in your browser) only if you say yes. Answering no silences it for good; the answer is kept in
+`state.json` under `FEMM_AGENT_HOME` (default `%LOCALAPPDATA%emm-agent-suite`, `~/.local/state/femm-agent-suite`).
 
 ## Licence
 

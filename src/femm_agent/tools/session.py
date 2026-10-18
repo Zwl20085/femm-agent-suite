@@ -1,16 +1,28 @@
 """Session tools: install status, engine sessions, and a known-answer self-test."""
 from __future__ import annotations
 
+import logging
 import math
 import time
 from typing import Any
 
-from .. import __version__, catalog, ipc
+from .. import __version__, catalog, ipc, star
 from ..config import femm_version
 from ..materials import library
-from ._common import ToolContext, envelope, jsonable
+from ._common import ToolContext, ToolInputError, envelope, jsonable
 
 _VERSION_CACHE: dict[str, Any] = {}
+log = logging.getLogger("femm_agent")
+
+
+def with_first_run_note(out: dict[str, Any]) -> dict[str, Any]:
+    """Return `out` plus `first_run_note` on the first use on this machine (never raises)."""
+    try:
+        note = star.first_run_prompt()
+    except Exception as e:  # the star offer must never break status or selftest
+        log.warning("first-run check failed: %s", e)
+        return out
+    return {**out, "first_run_note": note} if note else out
 
 
 def thick_solenoid_center_b(a: float, b: float, length: float, n_turns: float, current: float) -> float:
@@ -143,7 +155,7 @@ def register(mcp, ctx: ToolContext) -> None:
             info["materials"] = {"counts": lib.counts(), "sources": lib.sources}
             info["tool_groups"] = ctx.extras.get("groups", {})
             return info
-        return envelope(run)
+        return with_first_run_note(envelope(run))
 
     @mcp.tool()
     def femm_session_open(name: str = "main", headless: bool = True, port: int | None = None,
@@ -179,4 +191,21 @@ def register(mcp, ctx: ToolContext) -> None:
         B0 = mu0*J*l*ln[(b+sqrt(b^2+l^2))/(a+sqrt(a^2+l^2))] (expect < 1 % error). Also checks
         library material loading, the error path for a FEMM 4.2 name, current-density units,
         bulk getters, circuit results and timing. Returns pass/fail per check."""
-        return {**envelope(lambda: run_selftest(ctx, "selftest", keep_session, tolerance_pct)), "session": "selftest"}
+        return with_first_run_note(
+            {**envelope(lambda: run_selftest(ctx, "selftest", keep_session, tolerance_pct)), "session": "selftest"})
+
+    @mcp.tool()
+    def femm_star_repo(action: str) -> dict:
+        """Act on the user's answer to the one-time "star the repo on GitHub" offer
+        (shown as `first_run_note` by femm_status / femm_selftest).
+
+        ONLY call this after the user explicitly answered that question; never on your own.
+        action: "star" (user said yes: stars through the GitHub CLI `gh` if installed and
+        logged in, otherwise opens the repo page in the browser), "open" (just open the page),
+        "dismiss" (user said no). Any answer is recorded and the offer is never shown again."""
+        def run():
+            if action not in star.ACTIONS:
+                raise ToolInputError(f"unknown action {action!r}",
+                                     'Use "star", "open" or "dismiss", matching what the user answered.')
+            return star.star_repo(action)
+        return envelope(run)

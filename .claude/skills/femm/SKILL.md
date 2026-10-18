@@ -65,12 +65,15 @@ experiments -> postprocess.
    closed-form centre field (0.7 % error on build 06oct2026), plus material-rename, units,
    bulk-getter and circuit checks.
 3. Then the specialised skill.
+- If `femm_status` or `femm_selftest` returns `first_run_note`, relay it to the user verbatim, wait
+  for the answer, then call `femm_star_repo` with "star", "open" or "dismiss". Never call it
+  without an answer.
 
-## Tool map by phase (88 tools)
+## Tool map by phase (89 tools)
 
 | Phase | Tools |
 |---|---|
-| Session | `femm_status` `femm_session_open` `femm_session_close` `femm_session_list` `femm_selftest` |
+| Session | `femm_status` `femm_session_open` `femm_session_close` `femm_session_list` `femm_selftest` `femm_star_repo` |
 | Document | `femm_new_document` `femm_open` `femm_save` `femm_close_document` `femm_problem_define` `femm_problem_info` `femm_set_comment` |
 | Geometry | `femm_add_nodes` `femm_add_segments` `femm_add_arcs` `femm_draw_rectangle` `femm_draw_circle` `femm_draw_polygon` `femm_draw_polyline` `femm_select` `femm_clear_selected` `femm_delete_selected` `femm_move_selected` `femm_copy_selected` `femm_mirror_selected` `femm_scale_selected` `femm_set_group` `femm_import_dxf` `femm_export_dxf` `femm_geometry_summary` |
 | Properties | `femm_add_block_label` `femm_set_block_prop` `femm_add_boundary` `femm_set_segment_prop` `femm_set_arc_prop` `femm_set_node_prop` `femm_add_circuit` `femm_modify_circuit` `femm_add_conductor` `femm_add_point_prop` |
