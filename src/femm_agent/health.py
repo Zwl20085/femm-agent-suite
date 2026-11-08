@@ -38,6 +38,8 @@ def not_applicable(name: str, why: str) -> dict:
 
 # ----------------------------------------------------------------------------- energy
 
+ZERO_ENERGY_J = 1e-12   # below this a "consistent" 0 = 0 means nothing was excited
+
 def energy_consistency(energy: float, flux_linkages: Sequence[float], currents: Sequence[float],
                        linear: bool = True, tolerance: float = 0.03) -> dict:
     """Linear magnetostatics without magnets: W = 1/2 sum_k I_k psi_k (= 1/2 L I^2 for one coil).
@@ -51,6 +53,11 @@ def energy_consistency(energy: float, flux_linkages: Sequence[float], currents: 
     if not currents or all(abs(i) == 0 for i in currents):
         return not_applicable(name, "no circuit carries current")
     w_circ = 0.5 * sum(float(i) * float(p) for i, p in zip(currents, flux_linkages))
+    if max(abs(energy), abs(w_circ)) <= ZERO_ENERGY_J:
+        return _check(name, False, energy, w_circ, tolerance,
+                      f"a current flows but the field stores no energy ({energy:.3g} J, 1/2 sum(I psi) {w_circ:.3g} J): "
+                      "the circuit has no coil labels (or zero turns); assign them with "
+                      "femm_set_block_prop(circuit=..., turns=...)")
     err = _rel_err(energy, w_circ)
     ok = err <= tolerance
     msg = (f"field energy {energy:.6g} J vs 1/2 sum(I psi) {w_circ:.6g} J (rel err {err:.2%})"

@@ -7,8 +7,8 @@ import math
 from typing import Any, Callable, Sequence
 
 from . import estimate, health, plotting
-from .experiments import (BI_ENERGY, BI_LOSS_HYST, BI_LOSS_RES, BI_LOSS_TOTAL, BI_TORQUE, POINT_FIELDS, _SETUP_RE,
-                          ExperimentInputError, Ops, Run, _flat, _jsonable, _num, _restore_currents, as_complex,
+from .experiments_core import (BI_ENERGY, BI_LOSS_HYST, BI_LOSS_RES, BI_LOSS_TOTAL, BI_TORQUE, POINT_FIELDS, _SETUP_RE,
+                          ExperimentInputError, Ops, Run, _flat, _jsonable, _named, _num, _restore_currents, as_complex,
                           as_float)
 
 
@@ -37,7 +37,7 @@ def inductance(link, circuits: Sequence[str] | None = None, current: float = 1.0
     allc = run.circuit_names()
     run.require_circuits(circuits)
     if torque_groups:
-        run.require_groups(torque_groups, "torque_groups")
+        run.require_groups(torque_groups, "torque_groups", need_labels=True)
     if dq and currents is not None:
         raise ExperimentInputError("give dq or currents, not both",
                                    "Use dq={...} for Ld/Lq at one operating point, or currents=[...] for L(I).")
@@ -96,7 +96,7 @@ def inductance(link, circuits: Sequence[str] | None = None, current: float = 1.0
                 run.checks.append(chk)
             cols = ["case", "id_A", "iq_A", "psi_d_Wb", "psi_q_Wb", "torque_Nm"]
         elif currents is not None:
-            circuits = list(circuits) if circuits is not None else allc
+            circuits = list(circuits) if circuits is not None else run.default_circuits()
             if not circuits:
                 raise ExperimentInputError("no circuits in the model")
             base, _ = solve_and_read({})
@@ -111,9 +111,10 @@ def inductance(link, circuits: Sequence[str] | None = None, current: float = 1.0
                                              f"energy_vs_flux_linkage[{ck}@{i:g}A]"))
                 curve = l_of_i(currents, psis, base[ck])
                 curves[ck] = curve
+                run.warnings.extend(l_of_i_warnings(curve, ck))
                 for r in curve:
                     rows.append([ck, r["current"], r["psi"], r["L_secant"], r["L_incremental"]])
-            summary = {"circuits": circuits, "currents_A": list(currents), "linear_no_pm": lin,
+            summary = {"circuits": circuits, "currents_A": sorted(currents), "linear_no_pm": lin,
                        "L_secant_H": {c: [r["L_secant"] for r in curves[c]] for c in circuits},
                        "L_incremental_H": {c: [r["L_incremental"] for r in curves[c]] for c in circuits},
                        "psi_at_zero_Wb": {c: base[c] for c in circuits},
@@ -121,13 +122,13 @@ def inductance(link, circuits: Sequence[str] | None = None, current: float = 1.0
                                "differences (accuracy limited by the current spacing)"}
             c0 = circuits[0]
             plots = [("L_of_I", lambda pth: plotting.plot_curves(
-                pth, list(currents), {"L secant": [r["L_secant"] for r in curves[c0]],
+                pth, [r["current"] for r in curves[c0]], {"L secant": [r["L_secant"] for r in curves[c0]],
                                       "L incremental": [r["L_incremental"] for r in curves[c0]]},
                 title=f"Inductance vs current, {c0}", xlabel="current (A)", ylabel="L (H)",
                 dashed=("L incremental",)))]
             cols = ["circuit", "current_A", "psi_Wb", "L_secant_H", "L_incremental_H"]
         else:
-            circuits = list(circuits) if circuits is not None else allc
+            circuits = list(circuits) if circuits is not None else run.default_circuits()
             if not circuits:
                 raise ExperimentInputError("no circuits in the model",
                                          "Add one with femm_add_circuit(name=...), then femm_set_block_prop(x=, y=, "
@@ -169,27 +170,35 @@ def _check_currents(currents: Sequence[float]) -> list[float]:
 
 
 def l_of_i(currents: Sequence[float], psis: Sequence[float], psi0: float) -> list[dict]:
-    """Secant and incremental inductance from flux linkage psi(I) (pure). The zero-current point
-    (psi0, e.g. magnet flux) is included in the finite differences; points are returned in the
-    order given. L_incremental uses second-order differences on the non-uniform grid
-    (numpy.gradient), one-sided at the ends."""
-    import numpy as np
+    """Secant and incremental inductance from flux linkage psi(I) (pure), rows sorted by current.
 
+    L_secant = (psi(I) - psi(0)) / I. L_incremental = dpsi/dI on the grid {0} + currents: a central
+    difference through the two neighbours inside, first-order one-sided at the ends. Both are
+    monotone-safe (a rising psi never gives a negative slope), unlike second-order formulas on a
+    sparse non-uniform grid; accuracy is limited by the current spacing (see l_of_i_warnings)."""
     pts = sorted(set([0.0] + [float(i) for i in currents]))
     lookup = {float(i): float(p) for i, p in zip(currents, psis)}
     lookup[0.0] = float(psi0)
-    x = np.asarray(pts)
-    y = np.asarray([lookup[v] for v in pts])
-    dydx = np.gradient(y, x, edge_order=2 if len(x) >= 3 else 1)
-    inc = {v: float(d) for v, d in zip(pts, dydx)}
-    return [{"current": float(i), "psi": float(p), "L_secant": (float(p) - float(psi0)) / float(i),
-             "L_incremental": inc[float(i)]} for i, p in zip(currents, psis)]
+    y = [lookup[v] for v in pts]
+    inc: dict[float, float] = {}
+    n = len(pts)
+    for k, v in enumerate(pts):
+        lo, hi = max(k - 1, 0), min(k + 1, n - 1)
+        inc[v] = (y[hi] - y[lo]) / (pts[hi] - pts[lo]) if hi != lo else float("nan")
+    return [{"current": v, "psi": lookup[v], "L_secant": (lookup[v] - float(psi0)) / v, "L_incremental": inc[v]}
+            for v in pts if v != 0.0]
 
 
-def _named(check: dict, name: str) -> dict:
-    check = dict(check)
-    check["name"] = name
-    return check
+def l_of_i_warnings(rows: Sequence[dict], circuit: str = "") -> list[str]:
+    """Warn when an incremental inductance is non-positive or exceeds 1.5x the secant value: on a
+    saturating curve dpsi/dI <= psi/I, so such a value is a finite-difference artefact."""
+    bad = [r["current"] for r in rows
+           if not (r["L_incremental"] > 0) or r["L_incremental"] > 1.5 * abs(r["L_secant"])]
+    if not bad:
+        return []
+    at = f" of {circuit}" if circuit else ""
+    return [f"L_incremental{at} at {bad} A is <= 0 or > 1.5 x L_secant: limited by the current spacing; add currents "
+            "between those points (denser near the knee) before using it"]
 
 
 # ============================================================================= AC sweep
@@ -213,7 +222,7 @@ def ac_sweep(link, frequencies: Sequence[float], circuits: Sequence[str] | None 
     acs = int(hdr.get("ACSolver", 0) or 0)
     f0 = float(hdr.get("Frequency", 0) or 0)
     run.require_circuits(circuits)
-    circuits = list(circuits) if circuits is not None else run.circuit_names()
+    circuits = list(circuits) if circuits is not None else run.default_circuits()
     if not circuits:
         raise ExperimentInputError("no circuits in the model",
                                          "Add one with femm_add_circuit(name=...), then femm_set_block_prop(x=, y=, "

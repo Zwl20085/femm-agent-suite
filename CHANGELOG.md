@@ -85,6 +85,29 @@ Verified live on FEMM 5.0 build 20261101 (1144) and recorded in `docs/femm5-fact
   `femm_set_block_prop` / `femm_set_node_prop` document their full-replacement semantics.
 - `tests/test_catalog_vs_pyfemm.py` finds pyFEMM through `FEMM_DIR`.
 
+Review fixes (before release):
+- A requested circuit with no coil labels (or zero turns) is refused before solving; default
+  circuit lists skip such circuits with a warning. Renaming a circuit with mi_modifycircprop drops
+  its label links on FEMM 5 (verified). `energy_consistency` fails when a current flows but the
+  energy and 1/2 sum I psi are both ~0.
+- `L_incremental` uses central differences inside and first-order one-sided ends (no negative
+  slopes on sparse grids); L(I) rows are sorted by current; a warning flags increments <= 0 or
+  > 1.5 x L_secant.
+- A failed experiment leaves the session unsolved and unchecked; one refused by pre-flight keeps
+  its state.
+- `experiments_core.py` holds Ops / Run / helpers, so `experiments_sweeps` imports on its own.
+- `poles` / `pole_pairs` both accepted by `build_spm` (default 4 poles), `cogging` /
+  `femm_experiment_cogging` and `femm_estimate("cogging_period_deg")`.
+- `femm_estimate(..., session=)` records the comparison; `femm_report` counts it as the analytic
+  reference and lists CHECK / FAIL estimates and a FAIL health verdict among its doubts.
+- Verdict bands get a 1e-9 relative slack (a difference of exactly the tolerance is PASS).
+- WST force / torque groups must hold a block label; rotate / move groups may be geometry only.
+- Sector detection requires radial periodic segments (a linear periodic model is not a sector).
+- `force_vs_position` restores exactly the steps taken (and the offset) after a failure; steps < 1
+  is refused.
+- examples/README.md and run_spm.py use the new names; test_tool_names also scans CLAUDE.md and
+  examples/*.md.
+
 Plumbing:
 - Version 0.2.0 in pyproject, `__init__` and the plugin manifest (`tests/test_versions.py`); README
   tool counts are checked against the registry.

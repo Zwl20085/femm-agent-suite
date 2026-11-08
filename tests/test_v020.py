@@ -258,7 +258,11 @@ def test_l_of_i_pure():
     from femm_agent.experiments_sweeps import l_of_i
     rows = l_of_i(cur, psis, psi0)
     assert [r["L_secant"] for r in rows] == pytest.approx([0.5 - 0.05 * i for i in cur])
-    assert [r["L_incremental"] for r in rows] == pytest.approx([0.5 - 0.1 * i for i in cur])   # exact for quadratics
+    # central differences through the neighbours (0 A included), one-sided at the top end
+    grid = [0.0] + cur
+    f = [psi0] + psis
+    expect = [(f[2] - f[0]) / 2, (f[3] - f[1]) / 2, (f[3] - f[2]) / 1]
+    assert [r["L_incremental"] for r in rows] == pytest.approx(expect) and grid[-1] == 3.0
 
 
 def test_inductance_currents_offline(tmp_path):

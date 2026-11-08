@@ -27,7 +27,21 @@ def _run(s: Session, fn: Callable[..., dict], **kw: Any) -> dict:
     experiment's own last solve is still loaded, e.g. bh_check), and `checked` False either way
     (an experiment's health_summary covers its own rules, not femm_health_check)."""
     _need_magnetics(s)
-    res = fn(s.link, out_dir=s.work_dir / "experiments", restore_path=s.document, **kw)
+    was_checked = s.checked
+    s.checked = False            # from here on FEMM solves other geometries / currents
+    try:
+        res = fn(s.link, out_dir=s.work_dir / "experiments", restore_path=s.document, **kw)
+    except Exception as e:
+        if getattr(e, "tool_input", False):
+            s.checked = was_checked  # refused before any solve: the loaded solution is untouched
+            if s.document:           # Run saved a copy first; point FEMM back at the session document
+                try:
+                    s.link.call("mi_saveas", str(s.document).replace("\\", "/"))
+                except Exception:
+                    pass
+        else:
+            s.solved = False         # failed mid-sweep: what is loaded (if anything) is not the saved model
+        raise
     s.document = res.get("document") or s.document
     s.solved = res.get("left_solved") is not False
     s.checked = False
@@ -94,16 +108,17 @@ def register(mcp: Any, ctx: ToolContext) -> None:
                                                      drive=drive), need="document")
 
     @mcp.tool()
-    def femm_experiment_cogging(rotate_groups: list[int], slots: int, poles: int, steps: int = 31,
+    def femm_experiment_cogging(rotate_groups: list[int], slots: int, poles: int | None = None, steps: int = 31,
                                 periods: float = 1.0, center: list[float] | None = None, method: str = "rotate",
                                 gap_boundary: str | None = None, torque_groups: list[int] | None = None,
-                                session: str = "main") -> dict:
+                                pole_pairs: int | None = None, session: str = "main") -> dict:
         """Cogging torque: all circuit currents set to 0, torque over `periods` cogging periods
         (360/lcm(slots, poles) mech deg, `steps` samples incl. end point) and its harmonics.
-        `poles` is the number of poles (2p). Same rotor options as femm_experiment_torque_vs_angle.
+        Give exactly one of `poles` (number of poles, 2p; preferred) or `pole_pairs` (p). `slots`
+        and `poles` are full-machine counts. Same rotor options as femm_experiment_torque_vs_angle.
         Checks: zero mean, periodic end points, WST vs virtual work. Currents are restored."""
         return run_tool(ctx, session, lambda s: _run(s, experiments.cogging, rotate_groups=rotate_groups, slots=slots,
-                                                     poles=poles, steps=steps, periods=periods,
+                                                     poles=poles, pole_pairs=pole_pairs, steps=steps, periods=periods,
                                                      center=tuple(center or (0.0, 0.0)), method=method,
                                                      gap_boundary=gap_boundary, torque_groups=torque_groups),
                         need="document")

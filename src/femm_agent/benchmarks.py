@@ -200,7 +200,8 @@ def spm_slot_phases(slots: int, pole_pairs: int, slot_offset_deg: float) -> list
     return out
 
 
-def build_spm(link, path: str, *, slots: int = 12, pole_pairs: int = 2, rotor_r: float = 20.0,
+def build_spm(link, path: str, *, slots: int = 12, poles: int | None = None, pole_pairs: int | None = None,
+              rotor_r: float = 20.0,
               magnet_t: float = 3.0, gap: float = 1.5, stator_or: float = 50.0, slot_open: float = 2.0,
               tip_h: float = 1.0, slot_w: float = 5.0, slot_depth: float = 12.0, depth: float = 50.0,
               turns_per_slot: int = 20, steel: str = "M-19 14 mil", magnet: str = "N42",
@@ -216,8 +217,9 @@ def build_spm(link, path: str, *, slots: int = 12, pole_pairs: int = 2, rotor_r:
       between two mid-gap circles; rotate by ``mi_modifyboundprop('AGE', 10, angle)``.
 
     Phase A's magnetic axis and the d-axis (north pole of magnet 0) are both at 0 deg mechanical
-    when the rotor angle is 0. Circuits ``A``, ``B``, ``C`` (series, 0 A)."""
-    p = pole_pairs
+    when the rotor angle is 0. Circuits ``A``, ``B``, ``C`` (series, 0 A). Pole count: ``poles``
+    (2p, preferred) or ``pole_pairs`` (p), at most one; default 4 poles."""
+    p = 2 if poles is None and pole_pairs is None else estimate.resolve_pole_pairs(poles, pole_pairs, "build_spm")
     Rm = rotor_r + magnet_t          # magnet outer radius
     Rs = Rm + gap                   # stator bore
     link.call("newdocument", 0)

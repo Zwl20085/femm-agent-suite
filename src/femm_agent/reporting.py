@@ -215,17 +215,31 @@ def _depth_doubt(model_summary: dict | None) -> str | None:
 
 
 def doubts(*, experiments: Iterable[dict] = (), checks: Iterable[dict] = (), model_summary: dict | None = None,
-           health_run: bool | None = None) -> list[str]:
-    """Reasons a reader should not take the numbers at face value (pure). `health_run` False adds
-    "health check not run on this session"; None skips that item (not session-bound)."""
+           health_run: bool | None = None, estimates: Iterable[dict] = ()) -> list[str]:
+    """Reasons a reader should not take the numbers at face value (pure).
+
+    `checks`: a health check's rows (any ok=false gives a "health check verdict FAIL" doubt).
+    `health_run` False adds "health check not run on this session"; None skips that item (not
+    session-bound). `estimates`: records of femm_estimate(..., fem_value=, session=) calls
+    ({name, verdict, diff_pct, ...}); any of them clears "no analytic estimate attached", and a
+    CHECK / FAIL verdict among them is a doubt itself."""
     exps = list(experiments)
     checks = list(checks)
+    ests = list(estimates)
     out: list[str] = []
     if health_run is False:
         out.append("health check not run on this session (call femm_health_check before reporting numbers)")
+    failing = [c.get("name") for c in checks if c.get("ok") is False]
+    if failing:
+        out.append(f"health check verdict FAIL: failing rules {failing}")
     names = [str(c.get("name", "")) for c in checks] + [str(c.get("name", "")) for e in exps for c in e.get("health") or []]
-    if not any("analytic" in n or "estimate" in n for n in names):
-        out.append("no analytic estimate attached (compare a key number with femm_estimate(name, args, fem_value=...))")
+    if not ests and not any("analytic" in n or "estimate" in n for n in names):
+        out.append("no analytic estimate attached (compare a key number with femm_estimate(name, args, fem_value=..., "
+                   "session=...))")
+    for r in ests:
+        if r.get("verdict") != "PASS":
+            out.append(f"estimate {r.get('name')}: verdict {r.get('verdict')} (FEM differs by "
+                       f"{r.get('diff_pct', float('nan')):.3g} %, tolerance {r.get('tolerance_pct')} %)")
     d = _depth_doubt(model_summary)
     if d:
         out.append(d)

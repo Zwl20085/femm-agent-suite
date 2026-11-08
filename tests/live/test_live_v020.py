@@ -160,3 +160,31 @@ def test_planar_currentflow_current_is_total_over_depth(link, tmp_path):
     link.call("ci_loadsolution")
     i = link.call("co_getconductorproperties", "in")[1]
     assert i == pytest.approx(1.0 * 1.0 / 0.020 * 0.010 * 0.100, rel=1e-3)   # sigma V / L x h x depth
+
+
+def test_empty_or_renamed_circuit_is_refused_live(link, tmp_path):
+    from femm_agent import experiments as ex
+    from femm_agent import femfile, preflight
+
+    path = (tmp_path / "c.fem").as_posix()
+    benchmarks.build_ccore(link, path)
+    link.call("mi_addcircprop", "B", 0, 1)                  # defined, no labels
+    link.call("mi_saveas", path)
+    with pytest.raises(preflight.PreflightError, match="no coil labels"):
+        ex.inductance(link, circuits=["B"], current=1.0, out_dir=tmp_path, restore_path=path)
+    link.call("mi_modifycircprop", "coil", 0, "X")          # rename: FEMM 5 drops the label links
+    link.call("mi_saveas", path)
+    turns = preflight.circuit_turns(femfile.parse_file(path))
+    if turns.get("X", 0) == 0:
+        with pytest.raises(preflight.PreflightError, match="no coil labels"):
+            ex.inductance(link, circuits=["X"], current=1.0, out_dir=tmp_path, restore_path=path)
+    else:                                                   # a build that keeps the links must still work
+        r = ex.inductance(link, circuits=["X"], current=1.0, out_dir=tmp_path, restore_path=path)
+        assert r["summary"]["self_H"]["X"] > 0
+
+
+def test_l_of_i_live_increments_positive(tools):
+    tools.ok("femm_build_benchmark", kind="ccore", params={"iron": "M-19 14 mil"}, session="lofi2")
+    r = tools.ok("femm_experiment_inductance", currents=[20, 1, 5, 2], session="lofi2")
+    assert [row[1] for row in r["rows"]] == [1, 2, 5, 20]
+    assert all(row[4] > 0 for row in r["rows"]), r["rows"]

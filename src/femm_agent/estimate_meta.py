@@ -18,6 +18,7 @@ from typing import Any, Callable
 from . import estimate
 
 DEFAULT_TOL_PCT = 10.0
+VERDICT_RTOL = 1e-9          # relative slack on both verdict bands (floating-point rounding only)
 _NO_BENCH = f"no benchmark for this formula: default {DEFAULT_TOL_PCT:g} % tolerance"
 
 # name -> (unit, assumptions, tolerance %, or None for the default)
@@ -78,10 +79,10 @@ def names() -> list[str]:
 
 
 def args_of(name: str) -> list[str]:
-    """Argument names, with `poles` listed first where the formula takes pole_pairs (poles preferred)."""
+    """Argument names; the pole count is shown as "poles (or pole_pairs)" whichever spelling the
+    formula uses (both are accepted, poles preferred)."""
     params = list(inspect.signature(function(name)).parameters)
-    if "pole_pairs" in params:
-        params = ["poles (or pole_pairs)" if p == "pole_pairs" else p for p in params]
+    params = ["poles (or pole_pairs)" if p in ("pole_pairs", "poles") else p for p in params]
     return params
 
 
@@ -104,11 +105,15 @@ def describe(name: str) -> dict[str, Any]:
 
 
 def normalize_args(name: str, args: dict | None) -> dict:
-    """Copy of `args` with ``poles`` turned into ``pole_pairs`` for formulas that take pole pairs
-    (exactly one of the two must be given). Formulas whose argument already is `poles`
-    (cogging_period_deg) are left alone."""
+    """Copy of `args` with the pole count in the formula's own spelling: ``poles`` -> ``pole_pairs``
+    for formulas that take pole pairs, ``pole_pairs`` -> ``poles`` (2p) for formulas that take
+    poles (cogging_period_deg). Exactly one of the two may be given."""
     a = dict(args or {})
     params = inspect.signature(function(name)).parameters
+    if "poles" in params and "pole_pairs" not in params:      # e.g. cogging_period_deg(slots, poles)
+        if "poles" in a or "pole_pairs" in a:
+            a["poles"] = 2 * estimate.resolve_pole_pairs(a.pop("poles", None), a.pop("pole_pairs", None), name)
+        return a
     if "pole_pairs" in params and "poles" not in params:
         if "poles" in a or "pole_pairs" in a:
             a["pole_pairs"] = estimate.resolve_pole_pairs(a.pop("poles", None), a.pop("pole_pairs", None), name)
@@ -126,7 +131,8 @@ def verdict(fem_value: float, value: float, tol_pct: float) -> dict[str, Any]:
     den = abs(value) if value else max(abs(fem), 1e-300)
     rel = abs(fem - value) / den
     pct = 100.0 * rel
-    word = "PASS" if pct <= tol_pct else ("CHECK" if pct <= 2 * tol_pct else "FAIL")
+    slack = 1.0 + VERDICT_RTOL      # a difference of exactly the tolerance must not flip on rounding
+    word = "PASS" if pct <= tol_pct * slack else ("CHECK" if pct <= 2 * tol_pct * slack else "FAIL")
     out = {"verdict": word, "fem_value": fem, "diff_pct": pct, "ratio_fem_over_formula": (fem / value) if value else None,
            "tolerance_pct": tol_pct}
     if word == "CHECK":

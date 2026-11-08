@@ -241,3 +241,17 @@ def envelope(fn: Callable[[], Any], session: Session | None = None, **extra: Any
     out["seconds"] = round(time.time() - t0, 3)
     out.update(extra)
     return out
+
+
+def record_estimate(ctx: ToolContext, session: str, rec: dict) -> None:
+    """Keep an estimate comparison for femm_report: in the open session's notes, else (session not
+    started yet) in ctx.extras["estimates_pending"][session], merged when the report is built."""
+    s = ctx.sessions.sessions.get(session)
+    if s is not None:
+        s.notes.setdefault("estimates", []).append(rec)
+    else:
+        ctx.extras.setdefault("estimates_pending", {}).setdefault(session, []).append(rec)
+
+
+def session_estimates(ctx: ToolContext, s: Session) -> list[dict]:
+    return list(s.notes.get("estimates", [])) + list(ctx.extras.get("estimates_pending", {}).get(s.name, []))

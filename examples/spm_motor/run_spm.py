@@ -52,14 +52,14 @@ def main() -> None:
         cog_rot = experiments.cogging(link, [1, 10], torque_groups=[1], slots=12, poles=4, steps=n_cog,
                                       out_dir=exp_dir, restore_path=rot, tag="rotate")
         results.append(cog_rot)
-        emf = experiments.backemf(link, [1, 10], pole_pairs=2, rpm=1000, steps=n_emf, out_dir=exp_dir,
+        emf = experiments.back_emf(link, [1, 10], poles=4, rpm=1000, steps=n_emf, out_dir=exp_dir,
                                   restore_path=rot, psi_estimate=est["psi_pm_peak_Wb"])
         results.append(emf)
-        ldq = experiments.inductance(link, dq={"circuits": ["A", "B", "C"], "pole_pairs": 2, "id": 5, "iq": 5},
+        ldq = experiments.inductance(link, dq={"circuits": ["A", "B", "C"], "poles": 4, "id": 5, "iq": 5},
                                      torque_groups=[1], out_dir=exp_dir, restore_path=rot)
         results.append(ldq)
         tq = experiments.torque_vs_angle(link, [1, 10], torque_groups=[1], start=0, stop=30, steps=n_tq,
-                                         drive={"circuits": ["A", "B", "C"], "pole_pairs": 2, "id": 0, "iq": 10},
+                                         drive={"circuits": ["A", "B", "C"], "poles": 4, "id": 0, "iq": 10},
                                          out_dir=exp_dir, restore_path=rot)
         results.append(tq)
         pm = experiments.bh_check(link, out_dir=exp_dir, restore_path=rot)

@@ -26,8 +26,10 @@ Unchecked solves are marked: `femm_solve` and `femm_load_solution` return `check
 label groups found in the model, or `femm_check_rule` for non-magnetic physics). The session's
 `checked` flag (in `femm_session_list`) is set only by `femm_health_check` and reset by every
 solve, load or experiment. Treat any number from a session that is not `checked` as unverified.
-`femm_report` returns `doubts`: "health check not run on this session", "no analytic estimate
-attached", "planar depth left at default" and each experiment with failing checks;
+`femm_report` returns `doubts`: "health check not run on this session", "health check verdict
+FAIL", "no analytic estimate attached" (cleared by `femm_estimate(..., fem_value=..., session=...)`,
+which records the comparison for the report; a CHECK / FAIL estimate is listed as a doubt itself),
+"planar depth left at default" and each experiment with failing checks;
 `femm_compare_results` returns them per side ("A: ...", "B: ..."). Copy the doubts into what you
 tell the user; never drop them.
 

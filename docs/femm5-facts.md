@@ -466,6 +466,10 @@ Measured with the suite on Windows, headless; scripts in the 0.2.0 engineering n
   `KeyError: "'a'"`, a missing key `{J}` with `KeyError: 'J'`; the error is recorded in
   `summary.errors` for that case and the other cases still run (the base model is re-opened per
   case). Doubled braces `{{'a': 1}}` work.
+- **Renaming a circuit drops its label links.** `mi_modifycircprop("coil", 0, "X")` on the ccore
+  benchmark leaves circuit `X` with no block labels in the saved file (0 turns); a circuit added
+  with `mi_addcircprop` has none either until labels are assigned. Such a circuit reads psi = 0, so
+  the experiments refuse it (pre-flight) and `energy_vs_flux_linkage` fails 0 = 0 with a current.
 - **Command drift on build 20261101.** Every pre-processor (`mi_/ei_/hi_/ci_`) and magnetics
   post-processor (`mo_`) command the engine defines is in `data/commands.json`; the catalog
   entries the engine lacks are all the pyFEMM-only helpers already flagged `pyfemm_only`

@@ -41,7 +41,10 @@ MCP client --stdio--> server.py (mcp>=2 MCPServer, falls back to mcp 1.x FastMCP
                         |      postproc, scripting, docs, experiments, health, report
                         |-- experiments.py  standard tests (cogging, torque-angle, back-EMF, force-vs-position)
                         |     |-- experiments_sweeps.py  inductance / L(I), AC sweep, parametric
-                        |     `-- preflight.py   groups / circuits exist, sector detection (before any solve)
+                        |     |-- experiments_core.py    Ops, Run, ExperimentInputError, value/current helpers;
+                        |     |                          imported by both modules above, imports neither
+                        |     `-- preflight.py   groups (labels for WST groups) / circuits with coil labels exist,
+                        |                        rotational-sector detection (before any solve)
                         |-- health.py      pure physics invariants / sanity rules (unit tested)
                         |-- femfile.py     parse .fem/.fee/.feh/.fec text files to JSON summaries
                         |-- plotting.py / reporting.py  post-processing (pure, optional matplotlib)

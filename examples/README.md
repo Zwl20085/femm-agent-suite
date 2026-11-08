@@ -51,6 +51,6 @@ once with FEMM 5's periodic air-gap element (`BdryFormat 6`, stepped with
 ![SPM open-circuit flux density](../docs/images/spm_field_B.png)
 
 The same steps are available to an agent as MCP tools: `femm_build_benchmark`,
-`femm_health_check`, `femm_experiment_cogging`, `femm_experiment_backemf`,
+`femm_health_check`, `femm_experiment_cogging`, `femm_experiment_back_emf`,
 `femm_experiment_inductance`, `femm_experiment_torque_vs_angle`, `femm_experiment_bh_check`,
 `femm_compare_results` and `femm_report`.

@@ -5,7 +5,7 @@ import inspect
 from typing import Any
 
 from .. import estimate_meta, health, units
-from ._common import ToolContext, ToolInputError, envelope
+from ._common import ToolContext, ToolInputError, envelope, record_estimate
 
 
 def _doc(fn) -> str:
@@ -15,7 +15,8 @@ def _doc(fn) -> str:
 def register(mcp: Any, ctx: ToolContext) -> None:
 
     @mcp.tool()
-    def femm_estimate(name: str | None = None, args: dict | None = None, fem_value: float | None = None) -> dict:
+    def femm_estimate(name: str | None = None, args: dict | None = None, fem_value: float | None = None,
+                      session: str | None = None) -> dict:
         """Analytic sanity references in SI units (m, A, T, H, N, N*m). Call with no name to list every
         formula with its argument names, unit and expected FEM agreement. Examples:
         femm_estimate("ccore_gap_b", {"turns": 200, "current": 2, "gap": 0.002, "iron_path": 0.18, "mu_r": 2000});
@@ -25,7 +26,9 @@ def register(mcp: Any, ctx: ToolContext) -> None:
         Returns {name, value, unit, formula, assumptions, expected_fea_tolerance_pct}. Pass your FEMM
         number as `fem_value` (same SI unit) to also get `verdict`: PASS (within the tolerance), CHECK
         (within 2x: explain the gap before using it) or FAIL, with diff_pct and the FEM/formula ratio -
-        this replaces a separate femm_check_rule("compare_to_estimate", ...)."""
+        this replaces a separate femm_check_rule("compare_to_estimate", ...). With `session` (and
+        fem_value) the comparison is recorded for that session, so femm_report counts it as the
+        analytic reference (and lists a CHECK / FAIL verdict among its doubts). No engine is started."""
         def go() -> Any:
             if not name:
                 # same shape as 0.1 ({name: {args, formula}}), richer entries
@@ -44,6 +47,11 @@ def register(mcp: Any, ctx: ToolContext) -> None:
             out.pop("args", None)
             if fem_value is not None:
                 out.update(estimate_meta.verdict(fem_value, v, out["expected_fea_tolerance_pct"]))
+                if session:
+                    rec = {"name": name, "value": v if isinstance(v, (int, float)) else None,
+                           **{k: out.get(k) for k in ("verdict", "fem_value", "diff_pct", "tolerance_pct", "unit")}}
+                    record_estimate(ctx, session, rec)
+                    out["recorded_for_session"] = session
             if isinstance(v, complex):
                 v = {"re": v.real, "im": v.imag}
             elif isinstance(v, tuple):

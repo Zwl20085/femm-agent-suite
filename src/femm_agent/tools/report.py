@@ -8,7 +8,7 @@ from typing import Any
 
 from .. import diagnostics, experiments, femfile, reporting
 from ..sessions import Session
-from ._common import ToolContext, ToolInputError, envelope, run_tool
+from ._common import ToolContext, ToolInputError, envelope, run_tool, session_estimates
 
 
 def _saved_model(s: Session) -> str:
@@ -106,7 +106,8 @@ def register(mcp: Any, ctx: ToolContext) -> None:
             res["experiments_included"] = len(exps)
             ran_health = bool(s.checked or checks)
             res["doubts"] = reporting.doubts(experiments=exps, checks=checks or [], model_summary=depth_summary,
-                                             health_run=ran_health if s.physics == "magnetics" else None)
+                                             health_run=ran_health if s.physics == "magnetics" else None,
+                                             estimates=session_estimates(ctx, s))
             return res
         return run_tool(ctx, session, go)
 

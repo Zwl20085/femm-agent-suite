@@ -1,4 +1,4 @@
-"""Every `femm_*` tool name mentioned in README.md or a skill must be a registered tool."""
+"""Every `femm_*` tool name mentioned in README.md, CLAUDE.md, examples/*.md or a skill must be a registered tool."""
 import re
 from pathlib import Path
 
@@ -13,7 +13,7 @@ TOKEN = re.compile(r"(?<![A-Za-z0-9_.\-/\\])femm_[a-z][a-z0-9_]*")
 
 
 def _docs() -> list[Path]:
-    files = [ROOT / "README.md"]
+    files = [ROOT / "README.md", ROOT / "CLAUDE.md"] + sorted((ROOT / "examples").rglob("*.md"))
     skills = ROOT / ".claude" / "skills"
     if skills.is_dir():
         files += sorted(skills.rglob("*.md"))
