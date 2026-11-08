@@ -8,7 +8,10 @@ description: Hand sizing of electric machines and magnetic actuators before and 
 Hand formulas tell you what FEMM should roughly say; FEMM tells you what the formulas leave out
 (fringing, leakage, slotting, saturation, harmonics). Do both, and explain the gap. Formulas
 marked **textbook** are standard design relations, not FEMM behaviour verified by this project;
-the `femm_estimate` names are implemented and unit tested.
+the `femm_estimate` names are implemented and unit tested. Every `femm_estimate` reply carries
+`unit`, `assumptions` and `expected_fea_tolerance_pct`; pass your FEMM number as `fem_value=` to get
+a verdict: `femm_estimate("spm_gap_b", {...}, fem_value=0.862)`. Pole count arguments are `poles`
+(= 2p, e.g. 4); `pole_pairs` still works as an alias.
 
 ## 1. Slots and poles
 
@@ -31,8 +34,8 @@ combinations); compute it for the winding you actually lay out.
 
 ## 3. Air gap, Carter and magnet sizing
 
-- Carter coefficient for slot openings: `femm_estimate("carter_coefficient", {"slot_pitch": tau_s,
-  "slot_opening": b0, "gap": g})`; effective gap g_eff = k_c g.
+- Carter factor for slot openings: `femm_estimate("carter_factor", {"slot_pitch": tau_s,
+  "slot_opening": b0, "gap": g})` (`carter_coefficient` is an alias); effective gap g_eff = k_c g.
 - Surface-PM gap flux density: `femm_estimate("spm_gap_b", {"br": 1.31, "mu_r": 1.05,
   "magnet_thickness": l_m, "gap": g, "carter": k_c})` = Br l_m / (l_m + mu_r k_c g). Benchmark:
   0.843 T formula vs 0.862 T FEM.
@@ -44,12 +47,12 @@ combinations); compute it for the winding you actually lay out.
 ## 4. Flux linkage, EMF, torque
 
 - Peak PM flux linkage per phase (fundamental):
-  `femm_estimate("spm_flux_linkage_fundamental", {"bg", "radius", "stack_length", "pole_pairs",
+  `femm_estimate("spm_flux_linkage_fundamental", {"bg", "radius", "stack_length", "poles",
   "turns_per_phase", "winding_factor", "magnet_arc_fraction"})`, from B_1 = (4/pi) B_g sin(alpha pi/2)
   and Phi_1 = 2 B_1 r L / p. Benchmark: 51.0 mWb formula vs 47.6 mWb FEM (flat gap, no leakage).
-- Back-EMF: `femm_estimate("emf_from_flux_linkage", {"psi_peak", "rpm", "pole_pairs"})`
+- Back-EMF: `femm_estimate("emf_from_flux_linkage", {"psi_peak", "rpm", "poles"})`
   (E = omega_e psi).
-- Torque (amplitude-invariant dq): `femm_estimate("dq_torque", {"pole_pairs", "psi_d", "psi_q",
+- Torque (amplitude-invariant dq): `femm_estimate("dq_torque", {"poles", "psi_d", "psi_q",
   "i_d", "i_q"})` = 3/2 p (psi_d i_q - psi_q i_d); with inductances
   `dq_torque_from_inductances` = 3/2 p (psi_pm i_q + (L_d - L_q) i_d i_q). SPM: L_d close to L_q, so
   torque is almost all PM torque. Benchmark: 1.428 N*m from the formula vs 1.415 N*m FEM mean at
@@ -74,7 +77,7 @@ these parameters (mm, defaults in brackets):
 
 | Param | Meaning | Default |
 |---|---|---|
-| `slots`, `pole_pairs` | Q and p | 12, 2 |
+| `slots`, `poles` | Q and 2p (`pole_pairs` is accepted as an alias) | 12, 4 |
 | `rotor_r` | rotor iron radius | 20 |
 | `magnet_t` | magnet thickness (full-arc magnets) | 3 |
 | `gap` | mechanical air gap | 1.5 |
@@ -91,7 +94,7 @@ It returns radii, groups (`rotate_groups`, `torque_groups` [1]), circuits A/B/C,
 table, and estimates (Br, Carter, gap B, turns per phase, psi_pm, cogging period, EMF at 1000 rpm).
 The winding is single-layer, laid out by `spm_slot_phases` (phase A's axis and the rotor d-axis at
 0 degrees). Only the 12-slot / 4-pole layout was validated against FEM; for other Q/p check the
-slot phase table and the three-phase balance of `femm_experiment_backemf` before trusting it.
+slot phase table and the three-phase balance of `femm_experiment_back_emf` before trusting it.
 Interior-PM rotors, double-layer windings and outer rotors are not built by the tool: draw them
 with `femm-geometry`, or ask for them as a new builder.
 

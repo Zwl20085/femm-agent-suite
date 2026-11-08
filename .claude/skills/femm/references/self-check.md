@@ -12,9 +12,9 @@ stated band means something in the toolchain or the setup is wrong; find out wha
 | 4 | Force on the C-core armature, gap 1 to 3 mm, 9 steps of 0.25 mm. | `femm_experiment_force_vs_position(groups=[1], dy=0.25, steps=9)` | -9.74 N at 1 mm; WST vs virtual work within about 1.6 % RMS; flat-gap estimate -9.21 N |
 | 5 | C-core coil inductance at 2 A. | `femm_experiment_inductance(current=2)` | 7.47 mH (the no-fringing formula gives 4.81 mH; explain the gap) |
 | 6 | Cogging of the 12-slot / 4-pole SPM by both routes. | `femm_build_benchmark("spm")` then `femm_experiment_cogging(rotate_groups=[1, 10], torque_groups=[1], slots=12, poles=4)`; again with `params={"rotor_method": "age"}` and `method="age", gap_boundary="AGE", rotate_groups=[1]` | peak to peak 0.3824 N*m (rotate) vs 0.3835 N*m (air-gap element), 0.3 % apart; period 30 deg |
-| 7 | SPM back-EMF at 1000 rpm. | `femm_experiment_backemf(rotate_groups=[1, 10], pole_pairs=2, rpm=1000)` | fundamental about 9.97 V peak, THD about 27 %, psi_pm fundamental 47.6 mWb |
+| 7 | SPM back-EMF at 1000 rpm. | `femm_experiment_back_emf(rotate_groups=[1, 10], poles=4, rpm=1000)` | fundamental about 9.97 V peak, THD about 27 %, psi_pm fundamental 47.6 mWb |
 | 8 | SPM Ld and Lq with id = iq = 5 A. | `femm_experiment_inductance(dq={...}, torque_groups=[1])` | Ld 0.427 mH, Lq 0.421 mH |
-| 9 | SPM mean torque at iq = 10 A over 0-30 deg. | `femm_experiment_torque_vs_angle(..., drive={"circuits": ["A","B","C"], "pole_pairs": 2, "id": 0, "iq": 10})` | mean 1.415 N*m; 3/2 p psi iq gives 1.428 N*m |
+| 9 | SPM mean torque at iq = 10 A over 0-30 deg. | `femm_experiment_torque_vs_angle(..., drive={"circuits": ["A","B","C"], "poles": 4, "id": 0, "iq": 10})` | mean 1.415 N*m; 3/2 p psi iq gives 1.428 N*m |
 | 10 | Round copper wire (r 5 mm) R(f), 1 Hz to 10 kHz. | `femm_build_benchmark("round_wire")`, `femm_experiment_ac_sweep` | within 1.3 % of the Bessel solution at 10 kHz (0.0 % up to 100 Hz); power balance 0.00 % |
 
 Wrong answers that teach something:

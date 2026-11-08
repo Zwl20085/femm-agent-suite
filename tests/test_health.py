@@ -96,7 +96,17 @@ def test_pm_and_summary():
     assert r["ok"] is True and r["detail"]["permeance_coefficient"] == pytest.approx(2.48, rel=0.01)
     s = health.summarize([health.mesh_size(10), health.mesh_size(5000), health.not_applicable("x", "y")])
     assert s == {"total": 3, "passed": 1, "failed": 1, "not_applicable": 1, "failing": ["mesh_element_count"],
-                 "all_ok": False}
+                 "all_ok": False, "verdict": "FAIL"}
+
+
+def test_summary_verdict():
+    ok, bad, na = health.mesh_size(5000), health.mesh_size(10), health.not_applicable("x", "y")
+    assert health.summarize([ok, ok])["verdict"] == "PASS"
+    assert health.summarize([ok, bad, na])["verdict"] == "FAIL"
+    assert health.summarize([ok, na])["verdict"] == "CHECK"          # inconclusive check, none failed
+    assert health.summarize([na])["verdict"] == "CHECK"              # nothing applicable
+    assert health.summarize([])["verdict"] == "CHECK"                # nothing ran
+    assert health.verdict([bad]) == "FAIL"
 
 
 # ============================================================================= live

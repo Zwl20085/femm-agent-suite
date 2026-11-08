@@ -91,8 +91,14 @@ def register(mcp, ctx: ToolContext) -> None:
     @mcp.tool()
     def femm_set_block_prop(x: float, y: float, material: str, mesh_size: float | None = None, circuit: str = "",
                             magdir: float = 0.0, group: int = 0, turns: int = 1, session: str = "main") -> dict:
-        """Change the properties of the existing block label nearest (x, y) (same arguments as
-        femm_add_block_label). Use to swap materials or currents between solves."""
+        """Re-set the properties of the existing block label nearest (x, y): `material`, `mesh_size` (None or 0 =
+        automatic), `circuit` ("" = none), `magdir` (deg, default 0), `group` (default 0), `turns` (default 1).
+        NOT a partial update: every field is sent on each call, so an omitted argument RESETS that field to its
+        default (circuit cleared, group 0, turns 1, magdir 0, mesh automatic). Pass everything you want kept (read
+        it with femm_file_summary). Re-solve afterwards. Example:
+        femm_set_block_prop(10, 5, "Copper", circuit="A", turns=100, group=2). (Full replacement is deliberate:
+        it is what FEMM's xi_setblockprop does, and FEMM 5 has no label getter, so keeping old values would
+        need a save + re-parse of the model on every call.)"""
         def run(s: Session):
             args = set_block(s, x, y, material, mesh_size, circuit, magdir, group, turns)
             return {"label": [x, y], "setblockprop": args}
@@ -191,8 +197,11 @@ def register(mcp, ctx: ToolContext) -> None:
     @mcp.tool()
     def femm_set_node_prop(points: list[list[float]], prop: str = "", group: int = 0, conductor: str = "",
                            session: str = "main") -> dict:
-        """Select the nodes nearest each of `points` and set a point property (from
-        femm_add_point_prop, "" = none), group and (non-magnetics) conductor."""
+        """Select the nodes nearest each of `points` [[x, y], ...] (problem units) and set `prop` (name from
+        femm_add_point_prop; "" clears it), `group` (int, default 0) and, for electrostatics / heat flow / current
+        flow, `conductor` ("" = none). All fields are written together: omitted ones reset (a node you do not pass
+        group again goes to group 0). The selection is cleared afterwards. Returns {nodes, picked, args}.
+        Example: femm_set_node_prop([[0,0]], prop="Anchor", group=3)."""
         def run(s: Session):
             picks = _select_each(s, "selectnode", points)
             args: list[Any] = [prop, int(group)]
@@ -220,8 +229,11 @@ def register(mcp, ctx: ToolContext) -> None:
     @mcp.tool()
     def femm_modify_circuit(name: str, current: float | None = None, series: bool | None = None,
                             new_name: str | None = None, session: str = "main") -> dict:
-        """Change a circuit: current (A, real; for complex use femm_call('mi_modifycircprop', ...)),
-        series/parallel, or rename (mi_modifycircprop propnum 1 / 2 / 0). Re-solve afterwards."""
+        """Magnetics: change an existing circuit (femm_add_circuit) without touching the geometry. `current` = total
+        circuit current in A (real; for a complex phasor use femm_call("mi_modifycircprop", ...), complex
+        values unverified), `series` True = series / False = parallel, `new_name` renames. Only the fields you pass
+        change; at least one is required. Maps to mi_modifycircprop propnum 1 (current), 2 (type: 1 series,
+        0 parallel), 0 (name). Re-run femm_solve afterwards. Example: femm_modify_circuit("A", current=5.0)."""
         def run(s: Session):
             done = {}
             if current is not None:

@@ -153,7 +153,9 @@ def fetch_bulk(s: Session, key: str) -> tuple[list[list[Any]], list[str], str]:
     flat = as_list(s.post_call(cmd))
     if len(flat) % ncol:
         raise ToolInputError(f"{s.post}_{cmd} returned {len(flat)} values, not a multiple of {ncol}",
-                             "Report this: unexpected bulk getter layout.")
+                             f"The loaded solution looks stale or partial: re-solve with femm_solve() and retry "
+                             f"femm_mesh_arrays(which='{key}'); if it persists, read the raw reply with "
+                             f"femm_call(command='{s.post}_{cmd}') and report the FEMM build.")
     rows = [flat[i:i + ncol] for i in range(0, len(flat), ncol)]
     return rows, cols, where
 
@@ -249,15 +251,15 @@ def register(mcp, ctx: ToolContext) -> None:
     @mcp.tool()
     def femm_block_integral(points: list[list[float]] | None = None, group: list[int] | None = None,
                             codes: list[int] | None = None, session: str = "main") -> dict:
-        """Integrate over blocks: select the blocks containing `points` and/or every block in
-        `group` (list of group numbers), then evaluate xo_blockintegral for each code.
-        Magnetics codes (manual 3.7.1): 0 A.J, 1 A, 2 field energy (J), 3 hysteresis/lamination
-        loss, 4 resistive loss (W), 5 area, 6 total loss, 7 total current, 8/9 integral of Bx/By,
-        10 volume, 11/12 Lorentz force x/y, 15 Lorentz torque, 17 coenergy, 18/19 weighted
-        stress tensor force x/y (N, select the moving part surrounded by air), 22 stress tensor
-        torque (N m), 24 R^2... Other physics: see femm_api_get('eo_blockintegral') etc.
-        Defaults: magnetics [2,17,5,10,7]; electrostatics [0,1,2]; heatflow [0,1,2]; currentflow [0,1,4,5].
-        Planar results are per the problem depth (total, not per metre)."""
+        """Integrate over the blocks containing `points` [[x, y]] and/or every block in `group` [ints]; one result per
+        entry of `codes`. Magnetics codes (manual 3.7.1): 0 A.J, 1 A, 2 field energy (J), 3 hysteresis/lamination
+        loss (W), 4 resistive loss (W), 5 area, 6 total loss (W), 7 total current, 8 int Bx, 9 int By, 10 volume,
+        11/12 Lorentz force x/y, 13/14 same at 2x, 15 Lorentz torque, 16 2x Lorentz torque, 17 coenergy (J), 18/19
+        WST force x/y (N), 20/21 2x WST force, 22 WST torque (N m) about the ORIGIN, counter-clockwise positive
+        (verified on FEMM 5 build 20261101: T = sum r x F about (0, 0); put the rotor axis at the origin), 23 2x
+        WST torque, 24 R^2, 25/26 1x WST force, 27 1x WST torque, 28/29 1x Lorentz force, 30 1x Lorentz torque.
+        WST codes need the part surrounded by air. Planar results are totals over the depth. Defaults:
+        magnetics [2,17,5,10,7]."""
         def run(s: Session):
             if not points and not group:
                 raise ToolInputError("nothing selected", "Pass points=[[x, y]] inside the blocks or group=[n].")
@@ -291,11 +293,15 @@ def register(mcp, ctx: ToolContext) -> None:
 
     @mcp.tool()
     def femm_circuit_results(name: str, session: str = "main") -> dict:
-        """Magnetics: current (A), voltage drop (V) and flux linkage (Wb) of circuit `name`
-        (mo_getcircuitproperties), with derived inductance L = flux/current (for a circuit alone in
-        the model; mutual effects included), resistance (DC) or impedance V/I (AC).
-        Electrostatics/heat/current: conductor results (xo_getconductorproperties): voltage &
-        charge, temperature & heat flux, or voltage & current."""
+        """Magnetics circuit `name`: current (A), voltage drop (V), flux linkage (Wb, includes turns and depth) and
+        derived `inductance_H` = flux/current, R = V/I (DC) or Z = V/I (AC). Needs a solution (femm_solve).
+        CAVEATS: `inductance_H` is the SECANT inductance psi/I at this operating point, not dpsi/dI; it includes
+        mutual flux from other circuits (a self inductance only when they carry zero current) and, with magnets,
+        the magnet flux - then it is not meaningful: use femm_experiment_inductance (subtracts the 0 A solve) or
+        femm_experiment_inductance(currents=[...]) for L(I). Other physics: conductor voltage and charge (C) /
+        temperature (K) and heat flux (W) / voltage and current (A). Planar models report totals over the depth
+        (verified on FEMM 5 build 20261101: coax charge and heat flux = per-metre value x depth); divide by the
+        depth in metres for per-metre values."""
         def run(s: Session):
             if s.physics == "magnetics":
                 r = as_list(s.post_call("getcircuitproperties", name))

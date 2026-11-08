@@ -199,6 +199,56 @@ def _walk(prefix: str, v: Any, out: dict[str, float]) -> None:
             _walk(f"{prefix}.{k}" if prefix else str(k), x, out)
 
 
+def _depth_doubt(model_summary: dict | None) -> str | None:
+    if not model_summary or model_summary.get("problem_type") != "planar":
+        return None
+    depth = (model_summary.get("problem") or {}).get("Depth")
+    try:
+        default = depth is None or float(depth) == 1.0
+    except (TypeError, ValueError):
+        default = False
+    if not default:
+        return None
+    units = (model_summary.get("problem") or {}).get("LengthUnits", "unit")
+    return (f"planar depth left at default (1 {units}): forces, torques, energies and flux linkages scale with it; "
+            "set the stack length with femm_problem_define(depth=...)")
+
+
+def doubts(*, experiments: Iterable[dict] = (), checks: Iterable[dict] = (), model_summary: dict | None = None,
+           health_run: bool | None = None) -> list[str]:
+    """Reasons a reader should not take the numbers at face value (pure). `health_run` False adds
+    "health check not run on this session"; None skips that item (not session-bound)."""
+    exps = list(experiments)
+    checks = list(checks)
+    out: list[str] = []
+    if health_run is False:
+        out.append("health check not run on this session (call femm_health_check before reporting numbers)")
+    names = [str(c.get("name", "")) for c in checks] + [str(c.get("name", "")) for e in exps for c in e.get("health") or []]
+    if not any("analytic" in n or "estimate" in n for n in names):
+        out.append("no analytic estimate attached (compare a key number with femm_estimate(name, args, fem_value=...))")
+    d = _depth_doubt(model_summary)
+    if d:
+        out.append(d)
+    for e in exps:
+        hs = e.get("health_summary") or {}
+        if hs.get("failed"):
+            out.append(f"experiment {e.get('experiment')} has failing checks: {hs.get('failing')} "
+                       f"({(e.get('files') or {}).get('json', 'no file')})")
+    return out
+
+
+def _model_summary_of(result: dict) -> dict | None:
+    """Parsed summary of the model an experiment ran on (its saved copy), None if unreadable."""
+    path = result.get("model")
+    if not path or not Path(path).is_file():
+        return None
+    try:
+        from . import femfile
+        return femfile.parse_file(path).summary()
+    except Exception:
+        return None
+
+
 def load_result(obj: Any) -> dict:
     """Accept a result dict, a JSON string, or a path to an experiment .json file."""
     if isinstance(obj, dict):
@@ -245,6 +295,9 @@ def compare_results(a: Any, b: Any, rtol: float = 0.02, label_a: str = "A", labe
             cols.append({"column": name, "rows_compared": len(pairs), "max_abs_diff": mx, "rms_diff": rms,
                          "max_rel_to_peak": mx / peak, "differs": mx / peak > rtol})
     nd = sum(1 for s in summ if s["differs"]) + sum(1 for c in cols if c["differs"])
+    dbt = []
+    for lab, R in ((label_a, A), (label_b, B)):
+        dbt += [f"{lab}: {d}" for d in doubts(experiments=[R], model_summary=_model_summary_of(R))]
     return {"experiment": [A.get("experiment"), B.get("experiment")], "rtol": rtol, "summary": summ, "columns": cols,
-            "n_differences": nd, "same_within_rtol": nd == 0,
+            "n_differences": nd, "same_within_rtol": nd == 0, "doubts": dbt,
             "timing": {label_a: A.get("timing"), label_b: B.get("timing")}}

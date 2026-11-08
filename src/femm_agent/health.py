@@ -349,10 +349,23 @@ def compare_to_estimate(name: str, fem_value: float, estimate: float, tolerance:
                   f"FEM {fem_value:.6g} vs analytic {estimate:.6g} (diff {err:.1%})" + (f" -- {why}" if why else ""))
 
 
+def verdict(checks: Iterable[dict]) -> str:
+    """One word for a list of checks: "FAIL" if any check failed (ok is False); "PASS" if none
+    failed, at least one passed and none was inconclusive; otherwise "CHECK" (nothing applicable,
+    or some check returned ok = None while none failed). Only PASS lets a number be reported as
+    checked."""
+    checks = list(checks)
+    if any(c.get("ok") is False for c in checks):
+        return "FAIL"
+    if any(c.get("ok") is None for c in checks) or not any(c.get("ok") is True for c in checks):
+        return "CHECK"
+    return "PASS"
+
+
 def summarize(checks: Iterable[dict]) -> dict:
-    """Roll-up: counts and the names of failing checks."""
+    """Roll-up: counts, the names of failing checks and the `verdict` (PASS / CHECK / FAIL)."""
     checks = list(checks)
     fails = [c["name"] for c in checks if c.get("ok") is False]
     return {"total": len(checks), "passed": sum(1 for c in checks if c.get("ok") is True),
             "failed": len(fails), "not_applicable": sum(1 for c in checks if c.get("ok") is None),
-            "failing": fails, "all_ok": not fails}
+            "failing": fails, "all_ok": not fails, "verdict": verdict(checks)}

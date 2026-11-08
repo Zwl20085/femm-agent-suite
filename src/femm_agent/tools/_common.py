@@ -21,12 +21,65 @@ class ToolContext:
         return self.sessions.get(name)
 
 
-class ToolInputError(Exception):
-    """Bad input or wrong state detected by a tool before FEMM is called; carries the hint."""
+# The canonical loop, shared by femm_status (next_steps) and the server INSTRUCTIONS.
+NEXT_STEPS: tuple[str, ...] = (
+    "1. femm_status (install found? first-run note?)",
+    "2. femm_session_open (optional) -> femm_new_document(physics=...) or femm_open(path)",
+    "3. geometry: femm_problem_define, femm_draw_rectangle / femm_draw_polygon / femm_add_nodes + femm_add_segments",
+    "4. materials, labels, boundaries: femm_material_load, femm_add_block_label, femm_add_boundary, femm_add_circuit",
+    "5. femm_create_mesh (optional) -> femm_solve",
+    "6. femm_health_check (magnetics; femm_check_rule otherwise) - ok:false or verdict FAIL is a stop sign",
+    "7. post-process and report: femm_point_values / femm_block_integral / femm_circuit_results / experiments "
+    "-> femm_report (relay its doubts)",
+)
 
-    def __init__(self, message: str, hint: str = "Check the arguments in the tool description."):
+# message fragment (lower case) -> next action. First match wins; used for ToolInputError without an
+# explicit hint, for unrecognised FEMM errors and for plain ValueErrors from the engineering layer.
+MESSAGE_HINTS: tuple[tuple[str, str], ...] = (
+    ("no circuits", "Add one with femm_add_circuit(name=...), then put coil labels in it with "
+                    "femm_set_block_prop(x=, y=, material=, circuit=<name>, turns=<N>)."),
+    ("needs gap_boundary", "Pass gap_boundary=<name of the periodic air-gap boundary from "
+                           "femm_geometry_summary().boundaries>, or use method='rotate'."),
+    ("no boundary named", "List them: femm_geometry_summary() and read result.boundaries; pass one of "
+                          "those names exactly."),
+    ("not a (anti)periodic air gap", "Pick the boundary of type 'periodic air gap' / 'antiperiodic air gap' in "
+                                     "femm_geometry_summary().boundaries, or use method='rotate'."),
+    ("method must be", "Use method='rotate' (rotate the rotor groups and re-mesh) or method='age' "
+                       "(with gap_boundary=<air-gap boundary name>)."),
+    ("no objects in group", "Use a group listed in the message (femm_geometry_summary().groups), or tag the "
+                            "moving parts first with femm_set_group."),
+    ("circuit not in the model", "Use a circuit listed in the message, or create it with femm_add_circuit."),
+    ("steps must be", "Pass steps >= 1 (>= 3 for the virtual-work check)."),
+    ("dx and dy cannot both be zero", "Pass a non-zero step, e.g. dy=0.25 (problem units per step)."),
+    ("setup command", "Only preprocessor commands (mi_*, ei_*, hi_*, ci_*) are allowed in case.commands; "
+                      "use outputs=[...] for post-processing."),
+    ("unknown point quantity", "Use quantity B, Bx, By, H, Hx, Hy, A, mu or J (or a raw field name such as Js)."),
+    ("unknown output kind", "Use kind point, block, circuit, gap, line or expr."),
+    ("element count mismatch", "Re-solve with femm_solve, then repeat the call."),
+    ("magnetics (.fem) document", "Open or create a magnetics model: femm_new_document(physics='magnetics') "
+                                  "or femm_open(path) or femm_build_benchmark(kind)."),
+    ("exactly one of poles", "Give exactly one of poles (number of poles, 2p, preferred) or pole_pairs (p)."),
+    ("currents must", "Pass currents as a list of non-zero amps, e.g. currents=[1, 2, 5, 10]."),
+)
+DEFAULT_INPUT_HINT = "Check the arguments against the tool description (units, list shapes, names)."
+
+
+def message_hint(message: str) -> str | None:
+    """Next-action hint for a known error message fragment, else None."""
+    low = message.lower()
+    for frag, hint in MESSAGE_HINTS:
+        if frag in low:
+            return hint
+    return None
+
+
+class ToolInputError(Exception):
+    """Bad input or wrong state detected by a tool before FEMM is called; carries the hint.
+    Without an explicit hint the message is looked up in MESSAGE_HINTS."""
+
+    def __init__(self, message: str, hint: str | None = None):
         super().__init__(message)
-        self.hint = hint
+        self.hint = hint or message_hint(message) or DEFAULT_INPUT_HINT
 
 
 def require_document(s: Session) -> str:
@@ -144,8 +197,12 @@ def hint_for(err: Exception, session: Session | None = None) -> str:
     if "mesh" in low or "triang" in low or "tangle" in low:
         return "Meshing failed: look for overlapping segments, unclosed regions or labels outside regions (femm_geometry_summary helps)."
     if "did not answer" in low or "timeout" in low:
-        return "The call timed out. For long solves pass a larger timeout to femm_solve, or check femm_session_list."
-    return "Read the message; if the command signature is in doubt, call femm_api_search(name)."
+        return ("The call timed out: retry femm_solve(timeout=<2x the current value> s); if it times out again "
+                "check femm_session_list for a stuck engine and femm_session_close it.")
+    table = message_hint(msg)
+    if table:
+        return table
+    return "Look the command up with femm_api_get(name) to check its arguments, then retry with corrected values."
 
 
 def envelope(fn: Callable[[], Any], session: Session | None = None, **extra: Any) -> dict[str, Any]:
@@ -164,10 +221,22 @@ def envelope(fn: Callable[[], Any], session: Session | None = None, **extra: Any
     except ToolInputError as e:
         out["ok"] = False
         out["error"] = {"message": str(e), "hint": e.hint}
+    except ValueError as e:
+        if not getattr(e, "tool_input", False):   # plain ValueError: programming/argument error below
+            out["ok"] = False
+            out["error"] = {"message": f"{type(e).__name__}: {e}",
+                            "hint": getattr(e, "hint", None) or message_hint(str(e))
+                            or "Check the argument types and units in the tool description.",
+                            "trace": traceback.format_exc(limit=3)}
+        else:                                       # input error raised by a pure engineering module
+            out["ok"] = False
+            out["error"] = {"message": str(e), "hint": getattr(e, "hint", None) or message_hint(str(e))
+                            or DEFAULT_INPUT_HINT}
     except Exception as e:  # programming or input error: still answer, never crash the server
         out["ok"] = False
         out["error"] = {"message": f"{type(e).__name__}: {e}",
-                        "hint": getattr(e, "hint", None) or "Check the argument types and units in the tool description.",
+                        "hint": getattr(e, "hint", None) or message_hint(str(e))
+                        or "Check the argument types and units in the tool description.",
                         "trace": traceback.format_exc(limit=3)}
     out["seconds"] = round(time.time() - t0, 3)
     out.update(extra)

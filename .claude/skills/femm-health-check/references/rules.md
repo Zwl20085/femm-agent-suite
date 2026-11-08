@@ -18,7 +18,7 @@ runs any of the ones listed here on your own numbers.
 | `curve_consistency` | RMS(a - b) / peak of two sampled curves | 8 % | step too coarse for the virtual-work derivative; mesh noise |
 | `torque_ripple` | peak-to-peak / mean | informational | |
 | `zero_mean` | mean / peak of cogging | 5 % | a current left on; sweep not a whole number of periods |
-| `power_balance` | 1/2 Re(sum V conj I) = losses | 5 % | a conductor outside every circuit; an eddy region not counted |
+| `power_balance_ac` (alias `power_balance`) | 1/2 Re(sum V conj I) = losses | 5 % | a conductor outside every circuit; an eddy region not counted |
 | `skin_depth_resolution` | skin depth / element size | >= 1 | conductor mesh coarser than the skin depth |
 | `pm_operating_point` | B_m / Br per magnet | >= 0.2 | thin magnet, big gap, strong d-axis current |
 | `compare_to_estimate` | relative difference FEM vs formula | 15 % | wrong units, wrong formula, or a modelling error; the idealisation can explain only so much |

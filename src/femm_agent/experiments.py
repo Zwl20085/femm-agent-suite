@@ -23,7 +23,7 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Iterable, Sequence
 
-from . import estimate, femfile, health, plotting
+from . import estimate, femfile, health, plotting, preflight
 from .units import MU0
 
 # block-integral codes (FEMM 5 manual 3.7.1, magnetics)
@@ -32,6 +32,19 @@ BI_VOLUME, BI_COENERGY, BI_FX, BI_FY, BI_TORQUE = 10, 17, 18, 19, 22
 POINT_FIELDS = ("A", "B1", "B2", "Sig", "E", "H1", "H2", "Je", "Js", "Mu1", "Mu2", "Pe", "Ph", "ff")
 _SETUP_RE = re.compile(r"^(mi|ei|hi|ci)_[a-z0-9_]+$")
 _CPLX_RE = re.compile(r"^\s*([+-]?[\d.eE+-]*?)\s*([+-])\s*I\s*\*\s*([\d.eE+-]+)\s*$")
+
+
+# ============================================================================= errors
+
+class ExperimentInputError(ValueError):
+    """Bad experiment input detected before (or instead of) solving. Still a ValueError for callers of
+    this pure module; the tool envelope reports it as ``ok: false`` with ``hint`` (no traceback)."""
+
+    tool_input = True
+
+    def __init__(self, message: str, hint: str | None = None):
+        super().__init__(message)
+        self.hint = hint
 
 
 # ============================================================================= value helpers
@@ -191,9 +204,24 @@ class Run:
         self.ops.save_as(self.model_path)
         self.model = femfile.parse_file(self.model_path)
         if self.model.physics != "magnetics":
-            raise ValueError("experiments need a magnetics (.fem) document; call femm_new_document(physics='magnetics')")
+            raise ExperimentInputError("experiments need a magnetics (.fem) document",
+                                       "Open or create one: femm_new_document(physics='magnetics'), femm_open(path) or "
+                                       "femm_build_benchmark(kind).")
         self.files: dict[str, str] = {}
         self.checks: list[dict] = []
+        self.warnings: list[str] = []
+        self.left_solved: bool | None = None
+
+    # pre-flight (before the first solve)
+    def require_groups(self, groups: Sequence[int] | None, what: str = "groups") -> None:
+        preflight.require_groups(self.model, groups, what)
+
+    def require_circuits(self, circuits: Sequence[str] | None, what: str = "circuits") -> None:
+        preflight.require_circuits(self.model, circuits, what)
+
+    def warn_sector(self, center: Sequence[float] = (0.0, 0.0), slots: int | None = None,
+                    poles: int | None = None) -> None:
+        self.warnings.extend(preflight.sector_warnings(self.model, center, slots, poles))
 
     # model facts
     @property
@@ -224,8 +252,11 @@ class Run:
         if leave_solved:
             try:
                 self.ops.solve()
-            except Exception:
-                pass
+                self.left_solved = True
+            except Exception as e:  # the experiment's numbers stand; the post-processor state does not
+                self.left_solved = False
+                self.warnings.append(f"final re-solve at the restored model failed ({type(e).__name__}: {e}); "
+                                     "no solution is loaded: call femm_solve() before post-processing")
         csv_path = self.dir / f"{self.name}.csv"
         with open(csv_path, "w", newline="", encoding="utf-8") as fh:
             w = csv.writer(fh)
@@ -245,7 +276,7 @@ class Run:
             "experiment": self.name, "model": str(self.model_path), "document": self.restore_path or str(self.model_path),
             "parameters": parameters, "columns": columns, "rows": [[_jsonable(x) for x in r] for r in rows],
             "summary": _jsonable(summary), "health": self.checks, "health_summary": health.summarize(self.checks),
-            "files": self.files,
+            "files": self.files, "warnings": self.warnings, "left_solved": self.left_solved,
             "timing": {"total_s": round(total, 3), "solves": self.ops.solves,
                        "per_solve_s": round(self.ops.solve_seconds / self.ops.solves, 4) if self.ops.solves else None},
         }
@@ -281,7 +312,7 @@ def _angles(angles: Sequence[float] | None, start: float, stop: float, steps: in
     if angles is not None:
         return [float(a) for a in angles]
     if steps < 1:
-        raise ValueError("steps must be >= 1")
+        raise ExperimentInputError(f"steps must be >= 1, got {steps}", "Pass steps >= 3 (the virtual-work check needs three points).")
     if steps == 1:
         return [float(start)]
     n = steps - 1 if endpoint else steps
@@ -303,11 +334,16 @@ def force_vs_position(link, groups: Sequence[int], dx: float = 0.0, dy: float = 
     """
     run = Run(link, "force_vs_position", out_dir, restore_path, solve_timeout, tag)
     ops = run.ops
+    run.require_groups(groups, "groups")
+    if force_groups:
+        run.require_groups(force_groups, "force_groups")
+    run.require_circuits(circuits)
     fg = list(force_groups or groups)
     circuits = list(circuits) if circuits is not None else run.circuit_names()
     step_len = math.hypot(dx, dy)
     if step_len == 0:
-        raise ValueError("dx and dy cannot both be zero")
+        raise ExperimentInputError("dx and dy cannot both be zero",
+                                   "Pass the step per solve, e.g. dy=0.25 (problem units); position = k * step.")
     ux, uy = dx / step_len, dy / step_len
     ox, oy = start_offset
     if ox or oy:
@@ -354,6 +390,25 @@ def force_vs_position(link, groups: Sequence[int], dx: float = 0.0, dy: float = 
 
 # ============================================================================= rotation core
 
+def _age_names(run: Run) -> list:
+    return [b.get("BdryName") for b in run.model.boundaries() if int(b.get("BdryType", 0) or 0) in (6, 7)]
+
+
+def _preflight_rotation(run: Run, rotate_groups: Sequence[int], method: str, torque_groups: Sequence[int] | None,
+                        circuits: Sequence[str] | None, center: Sequence[float], drive: dict | None = None,
+                        slots: int | None = None, poles: int | None = None) -> None:
+    """Groups / circuits exist and the drive dict is complete, before the first solve."""
+    if method == "rotate":
+        run.require_groups(rotate_groups, "rotate_groups")
+        if torque_groups:
+            run.require_groups(torque_groups, "torque_groups")
+    run.require_circuits(circuits)
+    if drive:
+        estimate.pole_pairs_of(drive, "drive")
+        run.require_circuits(list(drive.get("circuits", ["A", "B", "C"])), "drive.circuits")
+    run.warn_sector(center, slots, poles)
+
+
 def _rotation_sweep(run: Run, angles: list[float], rotate_groups: Sequence[int], center: Sequence[float],
                     method: str, gap_boundary: str | None, torque_groups: Sequence[int] | None,
                     circuits: Sequence[str], drive: dict | None, record_coenergy: bool = True) -> list[dict]:
@@ -364,17 +419,24 @@ def _rotation_sweep(run: Run, angles: list[float], rotate_groups: Sequence[int],
     gap0 = 0.0
     if method == "age":
         if not gap_boundary:
-            raise ValueError("method='age' needs gap_boundary (the periodic air gap boundary name)")
+            raise ExperimentInputError("method='age' needs gap_boundary (the periodic air gap boundary name)",
+                                       "Pass gap_boundary=<name from femm_geometry_summary().boundaries>, or use "
+                                       "method='rotate'.")
         for b in run.model.boundaries():
             if b.get("BdryName") == gap_boundary:
                 gap0 = float(b.get("innerangle") or 0)
                 if int(b.get("BdryType", 0)) not in (6, 7):
-                    raise ValueError(f"boundary {gap_boundary!r} is not a (anti)periodic air gap (BdryFormat 6/7)")
+                    raise ExperimentInputError(f"boundary {gap_boundary!r} is not a (anti)periodic air gap (BdryFormat 6/7)",
+                                               f"Air-gap boundaries in this model: {_age_names(run)}; pass one as "
+                                               "gap_boundary, or use method='rotate'.")
                 break
         else:
-            raise ValueError(f"no boundary named {gap_boundary!r} in the model")
+            raise ExperimentInputError(f"no boundary named {gap_boundary!r} in the model",
+                                       f"Boundaries in this model: {[b.get('BdryName') for b in run.model.boundaries()]} "
+                                       "(femm_geometry_summary().boundaries); pass one exactly.")
     elif method != "rotate":
-        raise ValueError("method must be 'rotate' or 'age'")
+        raise ExperimentInputError(f"method must be 'rotate' or 'age', got {method!r}",
+                                   "Use method='rotate' (rotate the groups, re-mesh) or method='age' with gap_boundary=<name>.")
     tg = list(torque_groups or rotate_groups)
     out = []
     current_angle = 0.0
@@ -421,9 +483,10 @@ def _rotation_sweep(run: Run, angles: list[float], rotate_groups: Sequence[int],
 def dq_currents(drive: dict, rotor_angle_deg: float) -> dict[str, float]:
     """Phase currents for a dq operating point at a rotor angle.
 
-    ``drive = {"circuits": ["A","B","C"], "pole_pairs": p, "id": Id, "iq": Iq, "theta0_deg": 0}``;
-    theta_e = p * angle + theta0 (d-axis electrical angle w.r.t. phase A). Amplitude-invariant."""
-    p = int(drive.get("pole_pairs", 1))
+    ``drive = {"circuits": ["A","B","C"], "poles": 2p, "id": Id, "iq": Iq, "theta0_deg": 0}`` (``poles``
+    preferred; ``"pole_pairs": p`` accepted; exactly one); theta_e = p * angle + theta0 (d-axis
+    electrical angle w.r.t. phase A). Amplitude-invariant."""
+    p = estimate.pole_pairs_of(drive, "drive")
     th = math.radians(p * rotor_angle_deg + float(drive.get("theta0_deg", 0.0)))
     ia, ib, ic = estimate.inverse_park(float(drive.get("id", 0.0)), float(drive.get("iq", 0.0)), th)
     names = list(drive.get("circuits", ["A", "B", "C"]))
@@ -457,6 +520,7 @@ def torque_vs_angle(link, rotate_groups: Sequence[int] = (1,), *, angles: Sequen
     makes the stator currents follow the rotor; without it currents are left as set. Health: torque
     vs virtual work dW'/dtheta (fixed currents only)."""
     run = Run(link, "torque_vs_angle", out_dir, restore_path, solve_timeout, tag)
+    _preflight_rotation(run, rotate_groups, method, torque_groups, circuits, center, drive)
     circuits = list(circuits) if circuits is not None else run.circuit_names()
     angs = _angles(angles, start, stop, steps, True)
     recs = _rotation_sweep(run, angs, rotate_groups, center, method, gap_boundary, torque_groups, circuits, drive)
@@ -482,7 +546,7 @@ def torque_vs_angle(link, rotate_groups: Sequence[int] = (1,), *, angles: Sequen
     run.checks.append(health.torque_ripple(tq))
     t_dq = None
     if drive and len(circuits) == 3 and all(c in circuits for c in drive.get("circuits", [])):
-        p = int(drive.get("pole_pairs", 1))
+        p = estimate.pole_pairs_of(drive, "drive")
         names = list(drive.get("circuits"))
         t_dq = []
         for r in recs:
@@ -522,6 +586,7 @@ def cogging(link, rotate_groups: Sequence[int] = (1,), *, slots: int, poles: int
     end point included, plus its harmonic spectrum (order n = n * lcm(Q,2p) per revolution).
     All circuits are set to 0 A during the sweep and restored afterwards."""
     run = Run(link, "cogging", out_dir, restore_path, solve_timeout, tag)
+    _preflight_rotation(run, rotate_groups, method, torque_groups, circuits, center, slots=slots, poles=poles)
     circuits = list(circuits) if circuits is not None else run.circuit_names()
     period = estimate.cogging_period_deg(slots, poles)
     angs = _angles(None, 0.0, period * periods, steps, True)
@@ -560,20 +625,26 @@ def cogging(link, rotate_groups: Sequence[int] = (1,), *, slots: int, poles: int
 
 # ============================================================================= back-EMF
 
-def backemf(link, rotate_groups: Sequence[int] = (1,), *, pole_pairs: int, rpm: float = 1000.0, steps: int = 36,
+def back_emf(link, rotate_groups: Sequence[int] = (1,), *, poles: int | None = None, pole_pairs: int | None = None,
+             rpm: float = 1000.0, steps: int = 36,
             circuits: Sequence[str] | None = None, center: Sequence[float] = (0.0, 0.0), method: str = "rotate",
             gap_boundary: str | None = None, psi_estimate: float | None = None, out_dir=None, restore_path=None,
             solve_timeout: float | None = 600.0, tag: str | None = None) -> dict:
     """Open-circuit flux linkage per circuit over one electrical period (360/p mech deg, ``steps``
     samples, end point excluded) and the back-EMF e = dpsi/dt = omega_m * dpsi/dtheta_m, computed
     spectrally (exact for periodic samples). Reports fundamental, THD, line-line EMF, harmonics.
-    Health: balanced phases (sum ~ 0 for three phases), half-period antisymmetry."""
+    Health: balanced phases (sum ~ 0 for three phases), half-period antisymmetry. Give exactly one
+    of ``poles`` (2p, preferred) or ``pole_pairs`` (p)."""
     import numpy as np
 
-    run = Run(link, "backemf", out_dir, restore_path, solve_timeout, tag)
+    pole_pairs = estimate.resolve_pole_pairs(poles, pole_pairs, "back_emf")
+    run = Run(link, "back_emf", out_dir, restore_path, solve_timeout, tag)
+    _preflight_rotation(run, rotate_groups, method, None, circuits, center, poles=2 * pole_pairs)
     circuits = list(circuits) if circuits is not None else run.circuit_names()
     if not circuits:
-        raise ValueError("the model has no circuits; add mi_addcircprop + labels in the circuit first")
+        raise ExperimentInputError("the model has no circuits",
+                                   "Add one with femm_add_circuit(name=...), then femm_set_block_prop(x=, y=, material=, "
+                                   "circuit=<name>, turns=<N>) on each coil label.")
     period = 360.0 / pole_pairs
     angs = _angles(None, 0.0, period, steps, False)
     _zero_currents(run, run.circuit_names())
@@ -636,309 +707,8 @@ def backemf(link, rotate_groups: Sequence[int] = (1,), *, pole_pairs: int, rpm: 
              ("harmonics", lambda p: plotting.plot_harmonics(p, harm[circuits[0]]["order"], harm[circuits[0]]["amplitude"],
                                                              title=f"Back-EMF harmonics, {circuits[0]}",
                                                              xlabel="electrical order", ylabel="amplitude (V)", max_order=19))]
-    return run.finish({"pole_pairs": pole_pairs, "rpm": rpm, "steps": steps, "circuits": circuits, "method": method,
+    return run.finish({"poles": 2 * pole_pairs, "pole_pairs": pole_pairs, "rpm": rpm, "steps": steps, "circuits": circuits, "method": method,
                        "gap_boundary": gap_boundary}, cols, rows, summary, plots)
-
-
-# ============================================================================= inductance
-
-def inductance(link, circuits: Sequence[str] | None = None, current: float = 1.0, *, dq: dict | None = None,
-               torque_groups: Sequence[int] | None = None, gap_boundary: str | None = None, out_dir=None,
-               restore_path=None, solve_timeout: float | None = 600.0, tag: str | None = None) -> dict:
-    """Inductance matrix by flux-linkage differences: L_jk = (psi_j(I_k = current) - psi_j(0)) / current
-    (subtracting the zero-current solve removes PM flux; for saturating iron this is the secant
-    inductance about the PM operating point).
-
-    ``dq = {"circuits": ["A","B","C"], "pole_pairs": p, "theta0_deg": 0, "id": 1, "iq": 1}`` instead
-    injects d- and q-axis currents at the present rotor position (theta0 = electrical angle of the
-    d-axis w.r.t. phase A) and returns psi_pm, Ld, Lq, saliency and the dq torque, checked against
-    the FEM torque (WST on ``torque_groups`` or ``mo_gapintegral(gap_boundary, 0)``)."""
-    run = Run(link, "inductance", out_dir, restore_path, solve_timeout, tag)
-    ops = run.ops
-    allc = run.circuit_names()
-    rows: list[list] = []
-    summary: dict[str, Any] = {}
-    plots: list = []
-
-    def solve_and_read(currents: dict[str, float], want_energy=False):
-        for c in allc:
-            ops.set_current(c, currents.get(c, 0.0))
-        ops.solve()
-        fl = {c: as_float(ops.circuit(c)["flux"]) for c in allc}
-        extra = {}
-        if want_energy:
-            extra["energy"] = as_float(ops.block_integral(BI_ENERGY))
-        if torque_groups:
-            extra["torque"] = as_float(ops.block_integral(BI_TORQUE, torque_groups))
-        elif gap_boundary:
-            extra["torque"] = as_float(ops.gap_integral(gap_boundary, 0))
-        ops.close_post()
-        return fl, extra
-
-    try:
-        if dq:
-            names = list(dq.get("circuits", ["A", "B", "C"]))
-            p = int(dq.get("pole_pairs", 1))
-            th = math.radians(float(dq.get("theta0_deg", 0.0)))
-            i_d = float(dq.get("id", current))
-            i_q = float(dq.get("iq", current))
-            cases = {"zero": (0.0, 0.0), "d": (i_d, 0.0), "q": (0.0, i_q), "dq": (i_d, i_q)}
-            res = {}
-            for key, (a, b) in cases.items():
-                ia, ib, ic = estimate.inverse_park(a, b, th)
-                fl, extra = solve_and_read(dict(zip(names, (ia, ib, ic))))
-                pd, pq = estimate.park(fl[names[0]], fl[names[1]], fl[names[2]], th)
-                res[key] = {"id": a, "iq": b, "psi_d": pd, "psi_q": pq, **extra}
-                rows.append([key, a, b, pd, pq, extra.get("torque")])
-            psi_pm = res["zero"]["psi_d"]
-            ld = (res["d"]["psi_d"] - psi_pm) / i_d if i_d else None
-            lq = (res["q"]["psi_q"] - res["zero"]["psi_q"]) / i_q if i_q else None
-            t_dq = estimate.dq_torque(p, res["q"]["psi_d"], res["q"]["psi_q"], 0.0, i_q)
-            summary = {"psi_pm_Wb": psi_pm, "Ld_H": ld, "Lq_H": lq, "saliency_Lq_over_Ld": (lq / ld) if ld and lq else None,
-                       "torque_dq_at_iq_Nm": t_dq, "torque_fem_at_iq_Nm": res["q"].get("torque"),
-                       "torque_dq_at_id_iq_Nm": estimate.dq_torque(p, res["dq"]["psi_d"], res["dq"]["psi_q"], i_d, i_q),
-                       "torque_fem_at_id_iq_Nm": res["dq"].get("torque"), "cases": res}
-            if res["q"].get("torque") is not None:
-                chk = health.force_consistency(res["q"]["torque"], t_dq, "FEM torque", "3/2 p psi_d i_q", 0.15,
-                                               name="torque_fem_vs_dq")
-                chk["message"] += (" (single rotor position: EMF harmonics x current make the instantaneous torque"
-                                   " differ from the fundamental dq value; compare the mean of a driven torque_vs_angle sweep)")
-                run.checks.append(chk)
-            cols = ["case", "id_A", "iq_A", "psi_d_Wb", "psi_q_Wb", "torque_Nm"]
-        else:
-            circuits = list(circuits) if circuits is not None else allc
-            if not circuits:
-                raise ValueError("no circuits in the model")
-            base, _ = solve_and_read({})
-            lin = run.linear_no_pm()
-            M = []
-            for ck in circuits:
-                fl, extra = solve_and_read({ck: current}, want_energy=True)
-                col = [(fl[cj] - base[cj]) / current for cj in circuits]
-                M.append(col)
-                rows.append([ck, current] + col)
-                run.checks.append(_named(health.energy_consistency(extra["energy"], [fl[ck]], [current], linear=lin),
-                                         f"energy_vs_flux_linkage[{ck}]"))
-            Lmat = [[M[k][j] for k in range(len(circuits))] for j in range(len(circuits))]  # L[j][k]
-            summary = {"circuits": circuits, "L_matrix_H": Lmat, "self_H": {c: Lmat[i][i] for i, c in enumerate(circuits)},
-                       "linear_no_pm": lin}
-            if len(circuits) > 1:
-                asym = max(abs(Lmat[i][j] - Lmat[j][i]) / max(abs(Lmat[i][i]), abs(Lmat[j][j]), 1e-30)
-                           for i in range(len(circuits)) for j in range(len(circuits)))
-                run.checks.append({"name": "mutual_reciprocity", "ok": asym < 0.03, "value": asym, "expected": 0.0,
-                                   "tolerance": 0.03, "message": f"max |L_jk - L_kj| / L_self = {asym:.2%}"})
-            cols = ["excited_circuit", "current_A"] + [f"psi_{c}_per_A" for c in circuits]
-    finally:
-        _restore_currents(run)
-    return run.finish({"circuits": circuits if not dq else dq.get("circuits"), "current": current, "dq": dq,
-                       "torque_groups": torque_groups, "gap_boundary": gap_boundary}, cols, rows, summary, plots)
-
-
-def _named(check: dict, name: str) -> dict:
-    check = dict(check)
-    check["name"] = name
-    return check
-
-
-# ============================================================================= AC sweep
-
-def ac_sweep(link, frequencies: Sequence[float], circuits: Sequence[str] | None = None, *, current: float | None = None,
-             estimate_fn: Callable[[float], complex] | None = None, out_dir=None, restore_path=None,
-             solve_timeout: float | None = 600.0, tag: str | None = None) -> dict:
-    """Time-harmonic sweep: for each frequency set ``mi_probdef(f, ...)`` (other probdef fields kept),
-    solve, and read each circuit's phasors (FEMM phasors are peak amplitudes):
-    Z = V/I, R = Re Z, L = Im Z / omega, plus block-integral losses over all blocks (6 total,
-    4 resistive, 3 hysteresis/laminations). Health: 1/2 Re(sum V conj I) == total losses.
-    ``estimate_fn(f) -> complex Z`` adds an analytic comparison column. Frequency restored after."""
-    run = Run(link, "ac_sweep", out_dir, restore_path, solve_timeout, tag)
-    ops = run.ops
-    hdr = run.model.header
-    units = run.model.units
-    ptype = "axi" if run.model.problem_type == "axisymmetric" else "planar"
-    prec = float(hdr.get("Precision", 1e-8))
-    depth = float(hdr.get("Depth", 1))
-    minang = float(hdr.get("MinAngle", 30))
-    acs = int(hdr.get("ACSolver", 0) or 0)
-    f0 = float(hdr.get("Frequency", 0) or 0)
-    circuits = list(circuits) if circuits is not None else run.circuit_names()
-    if not circuits:
-        raise ValueError("no circuits in the model")
-    if current is not None:
-        for c in circuits:
-            ops.set_current(c, current)
-    rows, R, Lh, fs, est_r = [], {c: [] for c in circuits}, {c: [] for c in circuits}, [], []
-    try:
-        for f in frequencies:
-            ops.call("mi_probdef", float(f), units, ptype, prec, depth, minang, acs)
-            ops.solve()
-            row = [float(f)]
-            pin = 0.0
-            for c in circuits:
-                cp = ops.circuit(c)
-                i, v = cp["current"], cp["voltage"]
-                z = v / i if abs(i) > 0 else complex("nan")
-                w = 2 * math.pi * f
-                r = z.real
-                l = (z.imag / w) if f > 0 else (cp["flux"].real / i.real if i.real else float("nan"))
-                pin += 0.5 * (v * i.conjugate()).real
-                R[c].append(r)
-                Lh[c].append(l)
-                row += [i, v, cp["flux"], r, l]
-            ptot = as_float(ops.block_integral(BI_LOSS_TOTAL))
-            pres = as_float(ops.block_integral(BI_LOSS_RES))
-            phys = as_float(ops.block_integral(BI_LOSS_HYST))
-            row += [pin, ptot, pres, phys]
-            if estimate_fn is not None:
-                ze = estimate_fn(float(f))
-                row += [ze.real, ze.imag / (2 * math.pi * f) if f > 0 else None]
-                est_r.append(ze.real)
-            rows.append(row)
-            fs.append(float(f))
-            if f > 0:
-                run.checks.append(_named(health.power_balance(pin, ptot), f"ac_power_balance[{f:g} Hz]"))
-            ops.close_post()
-    finally:
-        ops.call("mi_probdef", f0, units, ptype, prec, depth, minang, acs)
-        _restore_currents(run)
-    cols = ["frequency_Hz"]
-    for c in circuits:
-        cols += [f"I_{c}_A", f"V_{c}_V", f"psi_{c}_Wb", f"R_{c}_ohm", f"L_{c}_H"]
-    cols += ["P_in_W", "P_loss_total_W", "P_loss_resistive_W", "P_loss_hyst_W"]
-    if estimate_fn is not None:
-        cols += ["R_analytic_ohm", "L_analytic_H"]
-        c0 = circuits[0]
-        for f, r, re_ in zip(fs, R[c0], est_r):
-            run.checks.append(_named(health.compare_to_estimate("R_vs_analytic", r, re_, 0.05), f"R_vs_analytic[{f:g} Hz]"))
-    summary = {"R_ohm": R, "L_H": Lh, "frequencies_Hz": fs}
-    c0 = circuits[0]
-    plots = [("resistance", lambda p: plotting.plot_curves(p, fs, {"FEM": R[c0], **({"analytic": est_r} if est_r else {})},
-                                                           title=f"Resistance vs frequency, {c0}", xlabel="frequency (Hz)",
-                                                           ylabel="R (ohm)", dashed=("analytic",))),
-             ("inductance", lambda p: plotting.plot_curves(p, fs, {"FEM": Lh[c0]}, title=f"Inductance vs frequency, {c0}",
-                                                           xlabel="frequency (Hz)", ylabel="L (H)"))]
-    return run.finish({"frequencies": list(map(float, frequencies)), "circuits": circuits, "current": current},
-                      cols, rows, summary, plots)
-
-
-# ============================================================================= parametric
-
-def _check_setup_command(name: str) -> None:
-    if not _SETUP_RE.match(name or ""):
-        raise ValueError(f"setup command {name!r} not allowed: use preprocessor commands (mi_/ei_/hi_/ci_ ...)")
-
-
-def collect_output(ops: Ops, spec: dict, unit_m: float = 1e-3) -> Any:
-    """Evaluate one output spec on the loaded solution.
-
-    kinds: ``point`` {x, y, quantity: A|B|Bx|By|H|Hx|Hy|mu|J|any POINT_FIELDS name},
-    ``block`` {code, groups?}, ``circuit`` {circuit, quantity: flux|current|voltage|L|R},
-    ``gap`` {boundary, code}, ``line`` {points, code, index?}, ``expr`` {expression} (one line of
-    MicroPython evaluated inside FEMM)."""
-    kind = spec.get("kind")
-    if kind == "point":
-        pv = ops.point(float(spec["x"]), float(spec["y"]))
-        q = spec.get("quantity", "B")
-        b1, b2 = as_complex(pv["B1"]), as_complex(pv["B2"])
-        h1, h2 = as_complex(pv["H1"]), as_complex(pv["H2"])
-        table = {"B": math.hypot(abs(b1), abs(b2)), "Bx": b1, "By": b2, "Br": b1, "Bz": b2,
-                 "H": math.hypot(abs(h1), abs(h2)), "Hx": h1, "Hy": h2, "mu": pv["Mu1"], "J": pv["Js"]}
-        v = table.get(q, pv.get(q))
-        if v is None:
-            raise ValueError(f"unknown point quantity {q!r}")
-        return _num(v)
-    if kind == "block":
-        return _num(ops.block_integral(int(spec["code"]), spec.get("groups")))
-    if kind == "circuit":
-        cp = ops.circuit(spec["circuit"])
-        q = spec.get("quantity", "flux")
-        if q == "L":
-            return (cp["flux"] / cp["current"]).real if abs(cp["current"]) else None
-        if q == "R":
-            return (cp["voltage"] / cp["current"]).real if abs(cp["current"]) else None
-        return _num(cp[q])
-    if kind == "gap":
-        return [_num(x) for x in _flat(ops.gap_integral(spec["boundary"], int(spec.get("code", 0))))]
-    if kind == "line":
-        v = ops.line_integral(spec["points"], int(spec.get("code", 0)))
-        idx = spec.get("index")
-        return _num(v[int(idx)]) if idx is not None else [_num(x) for x in v]
-    if kind == "expr":
-        return _jsonable(ops.link.eval(str(spec["expression"])) if hasattr(ops.link, "eval") else None)
-    raise ValueError(f"unknown output kind {kind!r} (point, block, circuit, gap, line, expr)")
-
-
-def parametric(link, cases: Sequence[dict], outputs: Sequence[dict], *, template: str | None = None,
-               out_dir=None, restore_path=None, solve_timeout: float | None = 600.0, tag: str | None = None) -> dict:
-    """Generic sweep. Each case starts from the same saved base model (re-opened), applies its setup,
-    solves and collects ``outputs`` (see :func:`collect_output`).
-
-    case = {"name": "g=1.5", "params": {"g": 1.5}, "commands": [{"command": "mi_modifymaterial",
-    "args": ["Magnet", 3, 1e6]}]}. ``template`` is an optional multi-line MicroPython snippet run
-    inside FEMM before solving, formatted with the case params (``{g}``); it is written to a file in
-    the run folder and executed via ``exec(open(path).read())``. Setup commands must be
-    preprocessor commands (mi_/ei_/hi_/ci_)."""
-    run = Run(link, "parametric", out_dir, restore_path, solve_timeout, tag)
-    ops = run.ops
-    base = run.model_path
-    names = [o.get("name") or f"out{k}" for k, o in enumerate(outputs)]
-    rows, errors = [], []
-    pkeys: list[str] = []
-    for c in cases:
-        for k in (c.get("params") or {}):
-            if k not in pkeys:
-                pkeys.append(k)
-    for n, case in enumerate(cases):
-        cname = case.get("name") or f"case{n}"
-        params = case.get("params") or {}
-        try:
-            ops.call("mi_close")
-        except Exception:
-            pass
-        ops.call("opendocument", str(base).replace("\\", "/"))
-        case_path = run.dir / f"case{n:03d}.fem"
-        ops.save_as(case_path)
-        try:
-            for cmd in case.get("commands") or []:
-                _check_setup_command(cmd.get("command"))
-                ops.call(cmd["command"], *cmd.get("args", []))
-            if template:
-                script = run.dir / f"case{n:03d}.py"
-                script.write_text(template.format(**params), encoding="utf-8")
-                ops.link.eval('exec(open("' + str(script).replace("\\", "/") + '").read())')
-            ops.save_as(case_path)
-            ops.solve()
-            vals = []
-            for spec in outputs:
-                try:
-                    vals.append(collect_output(ops, spec, run.unit_m))
-                except Exception as e:
-                    vals.append(None)
-                    errors.append({"case": cname, "output": spec.get("name"), "error": str(e)})
-            ops.close_post()
-            rows.append([cname] + [params.get(k) for k in pkeys] + vals)
-        except Exception as e:
-            errors.append({"case": cname, "error": f"{type(e).__name__}: {e}"})
-            rows.append([cname] + [params.get(k) for k in pkeys] + [None] * len(outputs))
-    try:
-        ops.call("mi_close")
-    except Exception:
-        pass
-    ops.call("opendocument", str(base).replace("\\", "/"))
-    cols = ["case"] + pkeys + names
-    summary = {"cases": len(cases), "errors": errors}
-    numeric = [i for i, nm in enumerate(names) if all(isinstance(r[1 + len(pkeys) + i], (int, float)) for r in rows)]
-    plots = []
-    if len(rows) >= 2 and pkeys and numeric and all(isinstance(r[1], (int, float)) for r in rows):
-        xs = [r[1] for r in rows]
-        for i in numeric[:3]:
-            nm = names[i]
-            ys = [r[1 + len(pkeys) + i] for r in rows]
-            plots.append((nm, lambda p, ys=ys, nm=nm: plotting.plot_curves(p, xs, {nm: ys}, title=f"{nm} vs {pkeys[0]}",
-                                                                           xlabel=pkeys[0], ylabel=nm)))
-    if errors:
-        run.checks.append({"name": "parametric_errors", "ok": False, "value": len(errors), "expected": 0, "tolerance": 0,
-                           "message": f"{len(errors)} case/output errors (see summary.errors)"})
-    return run.finish({"cases": list(cases), "outputs": list(outputs), "template": template}, cols, rows, summary, plots)
 
 
 # ============================================================================= PM operating points
@@ -980,7 +750,8 @@ def magnet_operating_points(ans: "femfile.FemmFile", B, area, min_fraction: floa
     B = np.asarray(B, dtype=float)
     area = np.asarray(area, dtype=float)
     if len(lab_idx) != len(B):
-        raise RuntimeError("element count mismatch between the .ans file and the live mesh (re-solve first)")
+        raise ExperimentInputError("element count mismatch between the .ans file and the live mesh",
+                                   "Re-solve with femm_solve(), then repeat the call.")
     rows, checks = [], []
     for li, lab in enumerate(labels):
         m = mats.get(lab["material"])
@@ -1065,6 +836,11 @@ def b_along_line(link, p1: Sequence[float], p2: Sequence[float], n: int = 101) -
     return {"distance": d, "B": bmag, "Bn": bn, "Bt": bt}
 
 
+from .experiments_sweeps import _named, ac_sweep, collect_output, inductance, parametric  # noqa: E402
+
 EXPERIMENTS = {"force_vs_position": force_vs_position, "torque_vs_angle": torque_vs_angle, "cogging": cogging,
-               "backemf": backemf, "inductance": inductance, "ac_sweep": ac_sweep, "parametric": parametric,
+               "back_emf": back_emf, "inductance": inductance, "ac_sweep": ac_sweep, "parametric": parametric,
                "bh_check": bh_check}
+
+
+backemf = back_emf   # pre-0.2.0 name of the module function (the MCP tool is femm_experiment_back_emf)

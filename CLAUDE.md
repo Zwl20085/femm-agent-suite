@@ -19,7 +19,11 @@ python -m venv .venv; .venv\Scripts\pip install -e ".[dev]"   # dev install (Pyt
 .venv\Scripts\python -m pytest                                 # offline tests (no FEMM needed)
 .venv\Scripts\python -m pytest -m live                         # live tests (need FEMM 5 installed)
 .venv\Scripts\python -m femm_agent                             # run the MCP server (stdio)
+.venv\Scripts\python -m femm_agent --doctor [--json]           # environment diagnosis (also --version)
 ```
+
+Live tests need `FEMM_DIR` (or a default install) and stay marked `@pytest.mark.live` so CI is
+FEMM-free; `tests/live/test_live_v020.py` re-measures the facts settled in 0.2.0.
 
 FEMM 5 is found via `FEMM_DIR` (bin folder) or the default install locations
 (`C:\femm-qt\bin`, `/Applications/femm_gui.app/Contents/MacOS`, `~/.local/opt/femm-qt/bin`).
@@ -35,12 +39,16 @@ MCP client --stdio--> server.py (mcp>=2 MCPServer, falls back to mcp 1.x FastMCP
                         |-- tools/*.py    tool groups, each `register(mcp, ctx)`:
                         |      session, document, geometry, properties, materials, mesh_solve,
                         |      postproc, scripting, docs, experiments, health, report
-                        |-- experiments.py  standard tests (cogging, torque-angle, back-EMF, inductance,
-                        |                   force-vs-position, AC impedance) composed from ops
+                        |-- experiments.py  standard tests (cogging, torque-angle, back-EMF, force-vs-position)
+                        |     |-- experiments_sweeps.py  inductance / L(I), AC sweep, parametric
+                        |     `-- preflight.py   groups / circuits exist, sector detection (before any solve)
                         |-- health.py      pure physics invariants / sanity rules (unit tested)
                         |-- femfile.py     parse .fem/.fee/.feh/.fec text files to JSON summaries
                         |-- plotting.py / reporting.py  post-processing (pure, optional matplotlib)
-                        `-- units.py / estimate.py      analytic layer (pure)
+                        |-- units.py / estimate.py / estimate_meta.py  analytic layer (pure; meta = unit,
+                        |                   assumptions, expected FEM tolerance, PASS/CHECK/FAIL verdict)
+                        `-- guide.py / doctor.py  skills for skill-less clients (femm_guide), environment
+                                            diagnosis (femm_doctor, --doctor); both import no mcp
 ```
 
 `server.build_server()` creates the server and a `ToolContext` (`tools/_common.py`), then imports
@@ -101,6 +109,16 @@ session sends is in `FemmLink.journal` (refused ones prefixed `#! `); `femm_jour
 
 Hints are part of the UX: write them as the next action the agent should take. Docstrings are
 written for an LLM caller: units, examples, pitfalls, which tool to call before/after.
+`ToolInputError(message)` without a hint, unrecognised FEMM errors and plain `ValueError`s are
+looked up in `tools/_common.MESSAGE_HINTS`; pure modules raise `ValueError` subclasses with
+`tool_input = True` and a `hint` (`ExperimentInputError`, `PreflightError`, `EstimateInputError`),
+which the envelope reports as input errors without a traceback.
+
+Unchecked numbers must stay visible: `Session.checked` is reset whenever `solved` is assigned and
+set only by `femm_health_check`; solves return `checked: false` + `next`; `femm_report` /
+`femm_compare_results` return `doubts`. Keep that when adding a tool that loads a solution.
+Pole counts are `poles` (= 2p, preferred) with `pole_pairs` as alias, exactly one
+(`estimate.resolve_pole_pairs`).
 
 ### Adding a tool
 
@@ -109,10 +127,13 @@ written for an LLM caller: units, examples, pitfalls, which tool to call before/
 2. A curated tool goes in the right `tools/*.py` group with `@mcp.tool()`, uses
    `ctx.session(name)` to get the `FemmLink`, wraps everything in `envelope(...)`.
 3. Pure logic (metrics, invariants, estimates) goes in its own module with tests in `tests/`.
-4. Document verified behaviour in `docs/femm5-facts.md` and mention the tool in
-   `.claude/skills/femm/references/tool-map.md`. Only write down behaviour observed on a real
+4. Document verified behaviour in `docs/femm5-facts.md` (with the build number) and mention the
+   tool in `.claude/skills/femm/references/tool-map.md`. Only write down behaviour observed on a real
    FEMM 5; mark anything else unverified.
-5. `tests/test_tool_names.py` fails if README or any skill names a tool that is not registered.
+5. `tests/test_tool_names.py` fails if README or any skill names a tool that is not registered;
+   `tests/test_versions.py` fails if the README tool counts, the CHANGELOG head or the three
+   version strings (pyproject, `__init__`, plugin.json) disagree. The wheel ships `.claude/skills`
+   and `docs/femm5-facts.md` (pyproject force-include) for `femm_guide` / `femm_facts`.
 
 ## Repo hygiene
 

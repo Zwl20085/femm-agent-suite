@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "femm-agent-suite"
-version = "0.1.0"
+version = "0.2.0"
 description = "All-in-one FEMM 5 agent toolkit: MCP server, physics checks, experiments and Claude skills for 2D magnetic, electrostatic, thermal and current-flow FEA"
 readme = "README.md"
 license = { text = "MIT" }
@@ -34,8 +34,15 @@ femm-mcp = "femm_agent.server:main"
 [tool.hatch.build.targets.wheel]
 packages = ["src/femm_agent"]
 
+# The skills (operating manual) and the verified-facts file ship inside the package so any MCP client
+# can read them via femm_guide / femm_facts. .claude/skills/ and docs/ stay the single source of truth.
 [tool.hatch.build.targets.wheel.force-include]
 "data" = "femm_agent/data"
+".claude/skills" = "femm_agent/skills"
+"docs/femm5-facts.md" = "femm_agent/docs/femm5-facts.md"
+
+[tool.hatch.build.targets.sdist.force-include]
+".claude/skills" = ".claude/skills"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

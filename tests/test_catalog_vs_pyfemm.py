@@ -1,16 +1,25 @@
 """Cross-check data/commands.json against the pyFEMM binding shipped with femm-qt.
 
-Skipped when the standard install location is absent. Every FemmSession method named xx_yyy
+Skipped when neither FEMM_DIR nor the standard install location holds pyfemm/femm.py. Every FemmSession method named xx_yyy
 must appear in the catalog or in EXCLUDED (names that are deliberately not FEMM commands).
 """
 import ast
 import json
+import os
 import re
 from pathlib import Path
 
 import pytest
 
-PYFEMM = Path("C:/femm-qt/pyfemm/femm.py")
+def _pyfemm() -> Path:
+    """pyfemm/femm.py of the install in FEMM_DIR (its bin folder), else the default location."""
+    env = os.environ.get("FEMM_DIR")
+    if env and (Path(env).parent / "pyfemm" / "femm.py").is_file():
+        return Path(env).parent / "pyfemm" / "femm.py"
+    return Path("C:/femm-qt/pyfemm/femm.py")
+
+
+PYFEMM = _pyfemm()
 CATALOG = Path(__file__).resolve().parents[1] / "data" / "commands.json"
 
 pytestmark = pytest.mark.skipif(not PYFEMM.is_file(), reason="femm-qt pyfemm not installed")

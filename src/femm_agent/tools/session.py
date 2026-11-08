@@ -9,7 +9,7 @@ from typing import Any
 from .. import __version__, catalog, ipc, star
 from ..config import femm_version
 from ..materials import library
-from ._common import ToolContext, ToolInputError, envelope, jsonable
+from ._common import NEXT_STEPS, ToolContext, ToolInputError, envelope, jsonable
 
 _VERSION_CACHE: dict[str, Any] = {}
 log = logging.getLogger("femm_agent")
@@ -133,7 +133,9 @@ def register(mcp, ctx: ToolContext) -> None:
 
         Call this first. If `install.found` is false, nothing else can run: install FEMM 5
         (https://www.femm.info) or set FEMM_DIR to the folder holding femm_headless.
-        `check_version` runs `femm_headless --version` once (cached, ~0.3 s)."""
+        `check_version` runs `femm_headless --version` once (cached, ~0.3 s). `next_steps` is the
+        canonical 7-step loop (status -> document -> geometry -> materials/labels/boundaries ->
+        mesh/solve -> health check -> post-process/report)."""
         def run():
             inst = ctx.sessions.install
             info: dict[str, Any] = {"suite_version": __version__, "install": {"found": inst is not None}}
@@ -155,8 +157,20 @@ def register(mcp, ctx: ToolContext) -> None:
             lib = library(inst)
             info["materials"] = {"counts": lib.counts(), "sources": lib.sources}
             info["tool_groups"] = ctx.extras.get("groups", {})
+            info["next_steps"] = list(NEXT_STEPS)
             return info
         return with_first_run_note(envelope(run))
+
+    @mcp.tool()
+    def femm_doctor() -> dict:
+        """Diagnose the environment without starting FEMM: rows {name, status PASS|WARN|FAIL, detail,
+        fix} for the host Python, the mcp package, the FEMM 5 install (FEMM_DIR or the default
+        folders), its executables, whether the default port 48015 is free, numpy / matplotlib /
+        pypdf, a writable state dir (FEMM_AGENT_HOME) and work dir (FEMM_AGENT_WORK), installed
+        skills (~/.claude/skills or a plugin) and the command/material catalogs. Act on the `fix`
+        of every FAIL first. Same as `python -m femm_agent --doctor [--json]` in a terminal."""
+        from .. import doctor
+        return envelope(lambda: doctor.report(doctor.run_checks()))
 
     @mcp.tool()
     def femm_session_open(name: str = "main", headless: bool = True, port: int | None = None,
@@ -176,12 +190,19 @@ def register(mcp, ctx: ToolContext) -> None:
 
     @mcp.tool()
     def femm_session_close(name: str = "main") -> dict:
-        """Quit the FEMM engine of session `name` (unsaved work is lost: call femm_save first)."""
+        """Quit the FEMM engine of session `name` (default "main") and forget the session. Unsaved models are lost:
+        call femm_save first. Returns {closed: bool} (False if no such session). Other sessions keep running. A
+        later tool call with session "main" starts a fresh engine lazily; other names need femm_session_open.
+        List sessions with femm_session_list."""
         return {**envelope(lambda: {"closed": ctx.sessions.close(name)}), "session": name}
 
     @mcp.tool()
     def femm_session_list() -> dict:
-        """All open sessions: port, pid, physics, document, solved flag, call/error counts."""
+        """List all open sessions, each {name, port, pid, headless, connected, physics, document, solved, checked,
+        work_dir, calls, errors, uptime_s}. physics and document are None when no document is open; solved says
+        whether a solution is loaded; checked says whether femm_health_check ran on that solution (reset by every
+        solve or load). No arguments. Use it to find a stale session before opening another, or to read the
+        work_dir against which relative paths resolve."""
         return envelope(lambda: ctx.sessions.list())
 
     @mcp.tool()

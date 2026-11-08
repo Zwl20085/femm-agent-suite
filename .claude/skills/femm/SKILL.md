@@ -1,6 +1,6 @@
 ---
 name: femm
-description: Entry point for any FEMM 5 (femm-qt) or 2D finite-element request in magnetics, electrostatics, heat flow or current flow - actuators, solenoids, inductors, electric machines, capacitors, busbars, heat sinks. Routes to the right femm-* skill, states the safety rules for driving FEMM through the femm MCP tools (femm_*), and gives a phase-by-phase tool map. Use it first whenever the user mentions FEMM, pyFEMM, a .fem/.fee/.feh/.fec/.ans file, David Meeker's FEMM, or asks which FEMM tool or skill to use.
+description: Entry point for any FEMM 5 (femm-qt) or 2D finite-element request in magnetics, electrostatics, heat flow or current flow - actuators, solenoids, inductors, electric machines, capacitors, busbars, heat sinks. Routes to the right femm-* skill, states the safety rules for driving FEMM through the femm MCP tools (femm_*), and gives a phase-by-phase tool map. Use it first whenever the user mentions FEMM, pyFEMM, a .fem/.fee/.feh/.fec/.ans file, David Meeker's FEMM, or asks which FEMM tool or skill to use. Also use it for task phrases such as cogging torque, back-EMF, inductance vs current, force vs gap, capacitance of a geometry, torque too high or a result that looks wrong, 2D FEA, finite element magnetics, or magnetostatic analysis.
 ---
 
 # FEMM agent suite: start here
@@ -24,7 +24,8 @@ actual work.
 | point values, block and line integrals, bulk mesh arrays, field statistics, plots, reports, A/B comparison | `femm-postprocess` |
 | raw FEMM commands, MicroPython scripts, legacy Lua or pyFEMM scripts, exporting a standalone script | `femm-scripting` |
 | size a motor or actuator by hand and get a FEMM model of it quickly | `femm-machine-design` |
-| an `ok: false` you do not understand, meshing/solver failures, port or engine problems, missing screenshots | `femm-troubleshooting` |
+| an `ok: false` you do not understand, a result that looks wrong (wrong by a factor), meshing/solver failures, port or engine problems, missing screenshots | `femm-troubleshooting` |
+| **Not covered:** winding layout; optimisation; core loss / efficiency | winding layout: hand table in `femm-machine-design`. Optimisation: loop `femm_experiment_parametric`. Core loss and efficiency are not available in FEMM: say so, do not invent them |
 
 Real jobs chain several: machine-design -> geometry -> materials -> magnetics -> health-check ->
 experiments -> postprocess.
@@ -61,6 +62,11 @@ experiments -> postprocess.
 ## First calls in a new conversation
 
 1. `femm_status` - install found, version, sessions, catalog size (677 commands), materials.
+   Its `next_steps` is the 7-step loop (status, document, geometry, materials/labels/boundaries,
+   mesh/solve, health check, post-process/report).
+   `femm_guide` - only for clients that did not load these skills: returns this skill and the others.
+   `femm_doctor` - when anything fails or the install looks wrong: PASS / WARN / FAIL rows with a
+   `fix` each (FEMM_DIR and install, executables, port, Python packages, dirs, skills, catalogs).
 2. `femm_selftest` once per machine (about 1-2 s): an axisymmetric thick solenoid against its
    closed-form centre field (0.7 % error on build 06oct2026), plus material-rename, units,
    bulk-getter and circuit checks.
@@ -69,11 +75,11 @@ experiments -> postprocess.
   follow `first_run_action`: wait for the answer, then call `femm_star_repo` with "star", "open"
   or "dismiss". Never call it without an answer.
 
-## Tool map by phase (89 tools)
+## Tool map by phase
 
 | Phase | Tools |
 |---|---|
-| Session | `femm_status` `femm_session_open` `femm_session_close` `femm_session_list` `femm_selftest` `femm_star_repo` |
+| Session | `femm_status` `femm_guide` `femm_doctor` `femm_session_open` `femm_session_close` `femm_session_list` `femm_selftest` `femm_star_repo` |
 | Document | `femm_new_document` `femm_open` `femm_save` `femm_close_document` `femm_problem_define` `femm_problem_info` `femm_set_comment` |
 | Geometry | `femm_add_nodes` `femm_add_segments` `femm_add_arcs` `femm_draw_rectangle` `femm_draw_circle` `femm_draw_polygon` `femm_draw_polyline` `femm_select` `femm_clear_selected` `femm_delete_selected` `femm_move_selected` `femm_copy_selected` `femm_mirror_selected` `femm_scale_selected` `femm_set_group` `femm_import_dxf` `femm_export_dxf` `femm_geometry_summary` |
 | Properties | `femm_add_block_label` `femm_set_block_prop` `femm_add_boundary` `femm_set_segment_prop` `femm_set_arc_prop` `femm_set_node_prop` `femm_add_circuit` `femm_modify_circuit` `femm_add_conductor` `femm_add_point_prop` |
@@ -82,7 +88,7 @@ experiments -> postprocess.
 | Post-processing | `femm_point_values` `femm_block_integral` `femm_line_integral` `femm_circuit_results` `femm_select_block` `femm_mesh_arrays` `femm_field_stats` `femm_gap_results` `femm_save_bitmap` `femm_make_plot` |
 | Scripting | `femm_call` `femm_eval` `femm_run_script` `femm_run_lua` `femm_journal` `femm_export_pyfemm_script` |
 | Knowledge | `femm_api_search` `femm_api_get` `femm_manual_section` `femm_examples_list` `femm_facts` |
-| Experiments | `femm_experiment_force_vs_position` `femm_experiment_torque_vs_angle` `femm_experiment_cogging` `femm_experiment_backemf` `femm_experiment_inductance` `femm_experiment_ac_sweep` `femm_experiment_parametric` `femm_experiment_bh_check` `femm_build_benchmark` |
+| Experiments | `femm_experiment_force_vs_position` `femm_experiment_torque_vs_angle` `femm_experiment_cogging` `femm_experiment_back_emf` `femm_experiment_inductance` `femm_experiment_ac_sweep` `femm_experiment_parametric` `femm_experiment_bh_check` `femm_build_benchmark` |
 | Analytic layer (offline) | `femm_estimate` `femm_units_convert` `femm_check_rule` |
 | Judgement and reports | `femm_health_check` `femm_report` `femm_compare_results` `femm_file_summary` `femm_plot_field` |
 

@@ -142,8 +142,9 @@ def register(mcp, ctx: ToolContext) -> None:
 
     @mcp.tool()
     def femm_close_document(session: str = "main") -> dict:
-        """Close the current pre-processor document and its post-processor (if any). The engine
-        keeps running; call femm_new_document or femm_open next."""
+        """Close the current pre-processor document and its post-processor (if any); the engine stays up. Unsaved
+        edits are lost (call femm_save first). Afterwards the session has no document: call femm_new_document or
+        femm_open next. To quit the engine itself use femm_session_close. Returns the tool envelope."""
         def run(s: Session):
             closed = []
             if s.physics:
@@ -214,7 +215,9 @@ def register(mcp, ctx: ToolContext) -> None:
 
     @mcp.tool()
     def femm_set_comment(comment: str, session: str = "main") -> dict:
-        """Store a free-text comment/description in the model file (xi_setcomment). Single line."""
+        """Store a single-line free-text comment in the model file (xi_setcomment). Needs an open document. Keep it
+        to one line (no newlines). It is written with the next femm_save. Example:
+        femm_set_comment("C-core, 200 turns, 2 A, gap 2 mm"). Returns the tool envelope."""
         def run(s: Session):
             s.pre_call("setcomment", comment.replace("\n", " "))
             return {"comment": comment}

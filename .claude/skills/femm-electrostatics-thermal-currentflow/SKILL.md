@@ -98,6 +98,9 @@ Other references: `coax_capacitance_per_length`. Turn them into checks with
 `femm_check_rule("compare_to_estimate", {"name": "C", "fem_value": ..., "estimate": ...,
 "tolerance": 0.05})` or `femm_check_rule("energy_consistency", ...)`.
 
+Step-by-step call sequences (parallel-plate capacitor, heat slab with convection, strip resistance),
+each ending with the estimate to compare to: `references/recipes.md`.
+
 ## Pitfalls
 
 - Current-flow conductivity is **S/m** (copper about 5.8e7); magnetics uses MS/m (58). A factor of
