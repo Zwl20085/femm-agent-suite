@@ -1,18 +1,20 @@
-# Tool map: all 89 femm_* tools
+# Tool map: the femm_* tools
 
 Every tool takes `session` (default `"main"`) unless noted as offline, and returns the envelope
 `{"ok", "result" | "error": {"message", "hint"}, "session", "seconds"}`. "Needs document" means a
 model must be open (`femm_new_document` / `femm_open`); "needs solution" means `femm_solve` or
 `femm_load_solution` ran since the last change.
 
-## Session (6)
+## Session
 
 | Tool | When / why |
 |---|---|
 | `femm_status` | First call: install path, version, sessions, work dir, catalog and material counts, loaded tool groups. Offline-safe. |
+| `femm_guide` | The skills themselves, for clients that did not load them: no args = router skill + skill index; `topic=` one skill; `topic=` + `reference=` one reference file. Offline-safe. |
+| `femm_doctor` | Environment rows PASS / WARN / FAIL with a `fix` each: FEMM install (FEMM_DIR), executables, port 48015, mcp, numpy / matplotlib / pypdf, state and work dirs, skills, catalogs. Starts no engine; same as `python -m femm_agent --doctor`. |
 | `femm_session_open` | Only to choose options: `headless=False` for a GUI (screenshots), a fixed `port`, a `work_dir`, or `attach=True` to an engine already listening. Other tools open "main" lazily. |
 | `femm_session_close` | Quit one engine (unsaved work is lost: `femm_save` first). |
-| `femm_session_list` | Port, pid, physics, document, solved flag, call/error counts of every session. Use when unsure what state a session is in. |
+| `femm_session_list` | Port, pid, physics, document, `solved` and `checked` flags, call/error counts of every session. Use when unsure what state a session is in. |
 | `femm_selftest` | Known-answer check of the whole toolchain in a separate "selftest" session (thick solenoid, about 1-2 s). Run once per machine and after any install change. |
 | `femm_star_repo` | One-time GitHub star offer: call only after the user answered the `first_run_note` (see `first_run_action`) from `femm_status` / `femm_selftest` ("star", "open" or "dismiss"). Asked once per machine. |
 
@@ -129,7 +131,7 @@ model must be open (`femm_new_document` / `femm_open`); "needs solution" means `
 | `femm_experiment_force_vs_position` | Move groups step by step, WST force, coenergy and flux linkage per step; checked against virtual work. Actuators, plungers, coilguns. |
 | `femm_experiment_torque_vs_angle` | Torque vs rotor angle by rotate-and-remesh or air-gap element; optional dq drive with a mean-torque check. |
 | `femm_experiment_cogging` | Zero-current torque over cogging periods with harmonics; zero-mean, periodicity and virtual-work checks. |
-| `femm_experiment_backemf` | Open-circuit flux linkage over one electrical period -> EMF, fundamental, THD, line-line EMF, Ke. |
+| `femm_experiment_back_emf` | Open-circuit flux linkage over one electrical period -> EMF, fundamental, THD, line-line EMF, Ke. |
 | `femm_experiment_inductance` | Self/mutual inductance matrix by flux-linkage differences, or psi_pm, Ld, Lq and dq torque at one rotor position. |
 | `femm_experiment_ac_sweep` | Frequency sweep: Z, R(f), L(f) and losses, with the AC power-balance check. |
 | `femm_experiment_parametric` | Generic sweep: per case apply pre-processor commands or a template, solve, collect point/block/circuit/gap/line/expression outputs. |

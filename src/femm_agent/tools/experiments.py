@@ -22,12 +22,34 @@ def _need_magnetics(s: Session) -> None:
 
 
 def _run(s: Session, fn: Callable[..., dict], **kw: Any) -> dict:
+    """Run one experiment and make the session state truthful afterwards: `solved` only when the
+    experiment left a solution of the restored model loaded (``left_solved``; None = the
+    experiment's own last solve is still loaded, e.g. bh_check), and `checked` False either way
+    (an experiment's health_summary covers its own rules, not femm_health_check)."""
     _need_magnetics(s)
-    res = fn(s.link, out_dir=s.work_dir / "experiments", restore_path=s.document, **kw)
+    was_checked = s.checked
+    s.checked = False            # from here on FEMM solves other geometries / currents
+    try:
+        res = fn(s.link, out_dir=s.work_dir / "experiments", restore_path=s.document, **kw)
+    except Exception as e:
+        if getattr(e, "tool_input", False):
+            s.checked = was_checked  # refused before any solve: the loaded solution is untouched
+            if s.document:           # Run saved a copy first; point FEMM back at the session document
+                try:
+                    s.link.call("mi_saveas", str(s.document).replace("\\", "/"))
+                except Exception:
+                    pass
+        else:
+            s.solved = False         # failed mid-sweep: what is loaded (if anything) is not the saved model
+        raise
     s.document = res.get("document") or s.document
-    s.solved = True
+    s.solved = res.get("left_solved") is not False
+    s.checked = False
     s.notes.setdefault("experiments", []).append(res["files"]["json"])
-    return _compact(res)
+    out = _compact(res)
+    if not s.solved:
+        out = {**out, "next": f"femm_solve(session={s.name!r})  # the final re-solve failed; nothing is loaded"}
+    return out
 
 
 def _compact(res: dict) -> dict:
@@ -46,14 +68,17 @@ def register(mcp: Any, ctx: ToolContext) -> None:
     def femm_experiment_force_vs_position(groups: list[int], dx: float = 0.0, dy: float = 0.0, steps: int = 11,
                                           force_groups: list[int] | None = None,
                                           start_offset: list[float] | None = None, session: str = "main") -> dict:
-        """Force vs position: move the parts in `groups` by (dx, dy) PROBLEM UNITS per step, re-solve,
-        and record the weighted-stress-tensor force on `force_groups` (default `groups`), the total
-        coenergy and every circuit's flux linkage. Health check: WST force vs virtual work dW'/ds.
-
-        Use for actuators, plungers, coilguns (axisymmetric: dy moves along z). The moving parts must
-        be surrounded by air and carry their own group number (femm_set_group). Geometry is moved back
-        at the end and the model is left solved at the start position. Example:
-        femm_experiment_force_vs_position(groups=[1], dy=0.25, steps=9). Returns rows
+        """Move `groups` by (dx, dy) problem units per step (not both 0), re-solve, record WST force (codes 18/19 on
+        `force_groups`, default `groups`), coenergy and circuit flux linkages; health: WST vs virtual work
+        dW'/ds. `position` (problem units) = distance moved along (dx, dy) from the model AS SAVED plus
+        `start_offset` [ox, oy]; it is not an absolute coordinate and not the gap: if the motion opens the gap,
+        gap = g0 + position (g0 = gap in the saved model; a two-gap armature has total gap 2 (g0 + position)).
+        Moving parts need air around them and their own group (femm_set_group); a group with no objects is
+        refused before any solve, listing the groups present. Axisymmetric: x = r, y = z. Afterwards the geometry
+        is moved back and the model re-solved at the saved position (verified on FEMM 5 build 20261101: B and
+        force identical to the pre-experiment solve); result `left_solved` is true, or false with `next:
+        femm_solve(...)` if that last solve failed. The session is left unchecked.
+        Example: femm_experiment_force_vs_position(groups=[1], dy=0.25, steps=9). Returns rows
         [position, Fx, Fy, F_along_motion, F_virtual_work, coenergy, psi_*] and csv/json/png paths."""
         return run_tool(ctx, session, lambda s: _run(s, experiments.force_vs_position, groups=groups, dx=dx, dy=dy,
                                                      steps=steps, force_groups=force_groups,
@@ -72,7 +97,8 @@ def register(mcp: Any, ctx: ToolContext) -> None:
         layer from torque_groups). Needs an air layer split by a circle in the gap so the rotor can turn.
         method='age': the model has a FEMM 5 'Periodic Air Gap' boundary (BdryFormat 6) named
         `gap_boundary`; its inner angle is stepped and torque = mo_gapintegral (mesh never changes).
-        `drive` = {"circuits": ["A","B","C"], "pole_pairs": p, "id": 0, "iq": 10, "theta0_deg": 0}
+        `drive` = {"circuits": ["A","B","C"], "poles": 4, "id": 0, "iq": 10, "theta0_deg": 0} ("poles" = 2p
+        preferred, "pole_pairs": p accepted, exactly one)
         makes the phase currents follow the rotor (amplitude-invariant dq; theta_e = p*angle + theta0)
         and adds a mean-torque check against 3/2 p (psi_d iq - psi_q id)."""
         return run_tool(ctx, session, lambda s: _run(s, experiments.torque_vs_angle, rotate_groups=rotate_groups,
@@ -82,48 +108,60 @@ def register(mcp: Any, ctx: ToolContext) -> None:
                                                      drive=drive), need="document")
 
     @mcp.tool()
-    def femm_experiment_cogging(rotate_groups: list[int], slots: int, poles: int, steps: int = 31,
+    def femm_experiment_cogging(rotate_groups: list[int], slots: int, poles: int | None = None, steps: int = 31,
                                 periods: float = 1.0, center: list[float] | None = None, method: str = "rotate",
                                 gap_boundary: str | None = None, torque_groups: list[int] | None = None,
-                                session: str = "main") -> dict:
+                                pole_pairs: int | None = None, session: str = "main") -> dict:
         """Cogging torque: all circuit currents set to 0, torque over `periods` cogging periods
         (360/lcm(slots, poles) mech deg, `steps` samples incl. end point) and its harmonics.
-        `poles` is the number of poles (2p). Same rotor options as femm_experiment_torque_vs_angle.
+        Give exactly one of `poles` (number of poles, 2p; preferred) or `pole_pairs` (p). `slots`
+        and `poles` are full-machine counts. Same rotor options as femm_experiment_torque_vs_angle.
         Checks: zero mean, periodic end points, WST vs virtual work. Currents are restored."""
         return run_tool(ctx, session, lambda s: _run(s, experiments.cogging, rotate_groups=rotate_groups, slots=slots,
-                                                     poles=poles, steps=steps, periods=periods,
+                                                     poles=poles, pole_pairs=pole_pairs, steps=steps, periods=periods,
                                                      center=tuple(center or (0.0, 0.0)), method=method,
                                                      gap_boundary=gap_boundary, torque_groups=torque_groups),
                         need="document")
 
     @mcp.tool()
-    def femm_experiment_backemf(rotate_groups: list[int], pole_pairs: int, rpm: float = 1000.0, steps: int = 36,
-                                circuits: list[str] | None = None, center: list[float] | None = None,
-                                method: str = "rotate", gap_boundary: str | None = None,
-                                psi_estimate: float | None = None, session: str = "main") -> dict:
+    def femm_experiment_back_emf(rotate_groups: list[int], poles: int | None = None, pole_pairs: int | None = None,
+                                 rpm: float = 1000.0, steps: int = 36,
+                                 circuits: list[str] | None = None, center: list[float] | None = None,
+                                 method: str = "rotate", gap_boundary: str | None = None,
+                                 psi_estimate: float | None = None, session: str = "main") -> dict:
         """Open-circuit back-EMF: flux linkage of each circuit (default all) over one electrical period
-        (360/pole_pairs mech deg, `steps` samples), EMF = omega * dpsi/dtheta (spectral derivative),
+        (720/poles mech deg, `steps` samples), EMF = omega * dpsi/dtheta (spectral derivative),
         fundamental / THD / harmonics / line-line EMF / Ke. Currents are zeroed and restored.
-        `psi_estimate` (Wb, peak) adds an analytic comparison (femm_estimate spm_flux_linkage_fundamental)."""
-        return run_tool(ctx, session, lambda s: _run(s, experiments.backemf, rotate_groups=rotate_groups,
-                                                     pole_pairs=pole_pairs, rpm=rpm, steps=steps, circuits=circuits,
+        Give exactly one of `poles` (number of magnet poles, 2p; preferred) or `pole_pairs` (p).
+        Example: femm_experiment_back_emf(rotate_groups=[1, 10], poles=4, rpm=1500).
+        `psi_estimate` (Wb, peak) adds an analytic comparison (femm_estimate spm_flux_linkage_fundamental).
+        On a sector model (periodic boundaries) `warnings` says the flux is for the sector as drawn.
+        (Renamed from femm_experiment_backemf in 0.2.0.)"""
+        return run_tool(ctx, session, lambda s: _run(s, experiments.back_emf, rotate_groups=rotate_groups,
+                                                     poles=poles, pole_pairs=pole_pairs, rpm=rpm, steps=steps,
+                                                     circuits=circuits,
                                                      center=tuple(center or (0.0, 0.0)), method=method,
                                                      gap_boundary=gap_boundary, psi_estimate=psi_estimate),
                         need="document")
 
     @mcp.tool()
     def femm_experiment_inductance(circuits: list[str] | None = None, current: float = 1.0, dq: dict | None = None,
+                                   currents: list[float] | None = None,
                                    torque_groups: list[int] | None = None, gap_boundary: str | None = None,
                                    session: str = "main") -> dict:
         """Inductance from flux linkage. Default: self/mutual matrix L_jk = (psi_j(I_k=current) - psi_j(0)) / current
         for `circuits` (default all) - subtracting the zero-current solve removes magnet flux. Linear
         models get an energy check (W = 1/2 L I^2).
-        dq mode: dq = {"circuits": ["A","B","C"], "pole_pairs": p, "theta0_deg": 0, "id": 5, "iq": 5}
+        L(I) mode: currents=[1, 2, 5, 10] (A) excites each circuit alone at each current and returns rows
+        [circuit, current_A, psi_Wb, L_secant_H, L_incremental_H] (secant (psi(I)-psi(0))/I, incremental
+        dpsi/dI by finite differences including the 0 A point) plus csv/json/png.
+        dq mode: dq = {"circuits": ["A","B","C"], "poles": 4, "theta0_deg": 0, "id": 5, "iq": 5} ("poles"
+        = 2p preferred, "pole_pairs" accepted)
         at the present rotor position (theta0 = electrical angle of the d-axis from phase A) gives
         psi_pm, Ld, Lq, saliency and the dq torque, checked against the FEM torque on `torque_groups`
         (WST) or `gap_boundary` (air-gap element)."""
         return run_tool(ctx, session, lambda s: _run(s, experiments.inductance, circuits=circuits, current=current,
-                                                     dq=dq, torque_groups=torque_groups, gap_boundary=gap_boundary),
+                                                     dq=dq, currents=currents, torque_groups=torque_groups, gap_boundary=gap_boundary),
                         need="document")
 
     @mcp.tool()
@@ -140,16 +178,18 @@ def register(mcp: Any, ctx: ToolContext) -> None:
     @mcp.tool()
     def femm_experiment_parametric(cases: list[dict], outputs: list[dict], template: str | None = None,
                                    session: str = "main") -> dict:
-        """Generic parametric study. Every case re-opens the same saved base model, applies its setup,
-        solves and collects outputs.
-        case: {"name": "Hc=900k", "params": {"hc": 9e5}, "commands": [{"command": "mi_modifymaterial",
-        "args": ["N42", 3, 9e5]}]} (preprocessor commands only: mi_/ei_/hi_/ci_).
-        template: optional multi-line MicroPython run inside FEMM per case, formatted with params,
-        e.g. "mi_selectgroup(1)\\nmi_movetranslate({dx}, 0)".
-        outputs: {"name", "kind": "point", "x", "y", "quantity": "B|Bx|By|A|H|mu|J"} |
-        {"kind": "block", "code": 22, "groups": [1]} | {"kind": "circuit", "circuit": "A",
-        "quantity": "flux|current|voltage|L|R"} | {"kind": "gap", "boundary": "AGE", "code": 0} |
-        {"kind": "line", "points": [[x,y],...], "code": 3} | {"kind": "expr", "expression": "..."}."""
+        """Generic sweep: each case re-opens the saved base model, applies its setup, solves, collects outputs.
+        case = {"name", "params": {...}, "commands": [{"command": "mi_modifycircprop", "args": ["A", 1, 5.0]}]}
+        (pre-processor mi_/ei_/hi_/ci_ only). mi_modifycircprop propnum: 0 name, 1 current (A), 2 type (1 series,
+        0 parallel). `template`: multi-line MicroPython run per case after the commands, formatted in the server
+        with str.format(**params): double every literal brace ({{ }}) and give every {name} a key in params - a
+        single brace or a missing key fails that case with KeyError in summary.errors (verified); the other
+        cases still run. outputs: {"name", "kind": "point", "x", "y", "quantity": "B|Bx|By|A|H|mu|J"} |
+        {"kind": "block", "code": 22, "groups": [1]} | {"kind": "circuit", "circuit": "A", "quantity":
+        "flux|current|voltage|L|R"} | {"kind": "gap", "boundary": "AGE", "code": 0} | {"kind": "line",
+        "points": [[x,y],...], "code": 3} | {"kind": "expr", "expression": "..."}. Rows are [case, params...,
+        outputs...]; the plot x-axis is the first params key if numeric in every case. The model is reopened at
+        the end."""
         return run_tool(ctx, session, lambda s: _run(s, experiments.parametric, cases=cases, outputs=outputs,
                                                      template=template), need="document")
 

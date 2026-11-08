@@ -14,6 +14,44 @@ from typing import Sequence
 from .units import EPS0, MU0
 
 
+class EstimateInputError(ValueError):
+    """Bad analytic-layer input; the tool envelope shows it as ok:false with `hint` (no traceback)."""
+
+    tool_input = True
+
+    def __init__(self, message: str, hint: str | None = None):
+        super().__init__(message)
+        self.hint = hint
+
+
+POLES_HINT = ("Give exactly one of poles (number of magnet poles, 2p; preferred) or pole_pairs (p = poles / 2), "
+              "e.g. poles=4 for a 4-pole rotor.")
+
+
+def resolve_pole_pairs(poles: float | None = None, pole_pairs: float | None = None, where: str = "") -> int:
+    """Pole pairs p from exactly one of ``poles`` (2p, preferred, same word as the jmag suite) or
+    ``pole_pairs`` (p, accepted alias). Raises EstimateInputError if both, neither, or not a
+    positive whole number (poles must be even)."""
+    at = f" ({where})" if where else ""
+    if poles is not None and pole_pairs is not None:
+        raise EstimateInputError(f"both poles={poles} and pole_pairs={pole_pairs} given{at}: give exactly one of "
+                                 "poles or pole_pairs", POLES_HINT)
+    if poles is None and pole_pairs is None:
+        raise EstimateInputError(f"give exactly one of poles or pole_pairs{at}", POLES_HINT)
+    if poles is not None:
+        if float(poles) != int(poles) or int(poles) < 2 or int(poles) % 2:
+            raise EstimateInputError(f"poles={poles} must be an even whole number >= 2 (poles = 2p){at}", POLES_HINT)
+        return int(poles) // 2
+    if float(pole_pairs) != int(pole_pairs) or int(pole_pairs) < 1:
+        raise EstimateInputError(f"pole_pairs={pole_pairs} must be a whole number >= 1{at}", POLES_HINT)
+    return int(pole_pairs)
+
+
+def pole_pairs_of(d: dict, where: str = "") -> int:
+    """resolve_pole_pairs on a ``drive`` / ``dq`` dict (keys ``poles`` or ``pole_pairs``)."""
+    return resolve_pole_pairs(d.get("poles"), d.get("pole_pairs"), where)
+
+
 # ----------------------------------------------------------------------------- coils
 
 def solenoid_b_infinite(turns: float, current: float, length: float) -> float:

@@ -202,7 +202,9 @@ def register(mcp, ctx: ToolContext) -> None:
             try:
                 r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, cwd=str(p.parent), **kw)
             except subprocess.TimeoutExpired as e:
-                raise ToolInputError(f"batch script exceeded {timeout} s", "Increase timeout or split the job.") from e
+                raise ToolInputError(f"batch script exceeded {timeout} s",
+                                     f"Retry femm_run_script(mode='batch', timeout={2 * timeout:g}) (2x the current value), "
+                                     "or split the job into shorter scripts.") from e
             err_lines = [ln for ln in (r.stderr or "").splitlines()
                          if not ln.startswith(("FEMM headless engine", "IPC: listening", "Executing:", "Script complete"))]
             return {"script": p.as_posix(), "mode": "batch", "exit_code": r.returncode, "ok_script": r.returncode == 0,
@@ -244,7 +246,9 @@ def register(mcp, ctx: ToolContext) -> None:
             try:
                 r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, cwd=str(p.parent))
             except subprocess.TimeoutExpired as e:
-                raise ToolInputError(f"Lua script exceeded {timeout} s", "Increase timeout.") from e
+                raise ToolInputError(f"Lua script exceeded {timeout} s",
+                                     f"Retry femm_run_lua(path, timeout={2 * timeout:g}) (2x the current value); the "
+                                     "script may wait for input or loop - run it by hand once to see.") from e
             return {"script": p.as_posix(), "exit_code": r.returncode, "stdout": (r.stdout or "")[-20000:],
                     "stderr": (r.stderr or "")[-5000:], "seconds": round(time.time() - t0, 3)}
         return envelope(run)

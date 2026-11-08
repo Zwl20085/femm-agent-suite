@@ -8,7 +8,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from .. import catalog
+from .. import catalog, guide
 from ..catalog import data_dir
 from ._common import ToolContext, ToolInputError, envelope
 
@@ -194,10 +194,10 @@ def register(mcp, ctx: ToolContext) -> None:
         quirks, units, what works headless, renamed materials. `query` returns only the sections
         that mention it. Read this before trusting FEMM 4.2 habits."""
         def run():
-            cands = [data_dir().parent / "docs" / "femm5-facts.md", data_dir() / "femm5-facts.md"]
-            p = next((c for c in cands if c.is_file()), None)
+            p = guide.facts_path()
             if p is None:
-                raise ToolInputError("docs/femm5-facts.md not found", "Use femm_manual_section or femm_api_get.")
+                raise ToolInputError("femm5-facts.md not found (neither packaged nor in a repo checkout)",
+                                     "Reinstall femm-agent-suite from a wheel, or use femm_manual_section / femm_api_get.")
             text = p.read_text(encoding="utf-8")
             if not query:
                 return {"file": p.name, "text": text}
@@ -205,3 +205,50 @@ def register(mcp, ctx: ToolContext) -> None:
             hits = [part for part in parts if query.lower() in part.lower()]
             return {"file": p.name, "sections": hits, "matched": len(hits)}
         return envelope(run)
+
+    @mcp.tool()
+    def femm_guide(topic: str | None = None, reference: str | None = None) -> dict:
+        """The femm operating manual (the femm-* skills): safety rules, the build-solve-check loop,
+        verified FEMM 5 behaviour and the tool map. Pure, no FEMM needed.
+
+        Call this first if your client did not load the femm skills (i.e. you are not in Claude
+        Code) and follow the rules it returns before driving FEMM.
+        No args: index of all skills {name, description}, the full text of the 'femm' router skill
+        and its reference files. topic='<skill>' (e.g. 'femm-magnetics', 'femm-health-check'): that
+        skill's SKILL.md and its reference file names. topic + reference='<file>' (e.g.
+        topic='femm-health-check', reference='rules.md'; '.md' optional): one reference file;
+        reference alone searches every skill for that file name."""
+        def run() -> Any:
+            names = guide.skill_names()
+            if topic is None and reference is None:
+                return {"skills": guide.list_skills(), "topic": guide.ROUTER, "text": guide.read_skill(guide.ROUTER),
+                        "references": guide.list_references(guide.ROUTER),
+                        "next": "femm_guide(topic=<skill>) for the skill that fits the task"}
+            t = topic
+            if t is None:
+                hits = [n for n in names if _has_ref(n, reference)]
+                if len(hits) != 1:
+                    where = f"found in {hits}" if hits else "not found in any skill"
+                    raise ToolInputError(f"reference {reference!r} {where}",
+                                         "Pass topic=<skill> too; femm_guide(topic=<skill>) lists its references.")
+                t = hits[0]
+            if t not in names:
+                raise ToolInputError(f"unknown topic {t!r}", "Valid topics: " + ", ".join(names))
+            refs = guide.list_references(t)
+            if reference is not None:
+                try:
+                    text = guide.read_skill(t, reference)
+                except (KeyError, ValueError):
+                    raise ToolInputError(f"skill {t!r} has no reference {reference!r}",
+                                         "Valid references: " + (", ".join(refs) or "(none)")) from None
+                return {"topic": t, "reference": reference, "text": text}
+            return {"topic": t, "text": guide.read_skill(t), "references": refs}
+        return envelope(run)
+
+
+def _has_ref(name: str, reference: str) -> bool:
+    try:
+        guide.read_skill(name, reference)
+        return True
+    except (KeyError, ValueError):
+        return False

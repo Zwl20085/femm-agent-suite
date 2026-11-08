@@ -62,13 +62,33 @@ Full list of server hints and input-validation errors with their fixes: `referen
 | everything exactly 0 from `femm_gap_results` / `mo_gapintegral` | the boundary name is not an air-gap boundary of this model (FEMM does not raise) |
 | torque about 1e-16 N*m with an air-gap element | WST block integral 22 does not see across the AGE: use `femm_gap_results` |
 | `outside: true` from `femm_point_values` | the point is outside the mesh, or inside a `<No Mesh>` region such as the AGE annulus |
-| results scale with a strange factor | depth not set (default 1 unit), or units mixed (MS/m vs S/m, MA/m^2 vs A/m^2, mm vs m in `femm_estimate`) |
+| results are off by a clean factor | read the ratio table below |
 | flux linkage 0 for a coil | coil labels have no circuit, or +N and -N turns of a series circuit cancel because both sides were given the same sign |
 | inductance far above the formula | fringing and leakage (C-core: 7.47 mH FEM vs 4.81 mH formula is normal) |
 | boundary health rule fails | air box too small; use 3-5x the device or `mi_makeABC` |
 | W != W' in a "linear" model | a nonlinear B-H material is in use somewhere |
 | AC losses do not match 1/2 Re(V conj I) | a conductor outside every circuit, or remember phasors are peak, not rms |
 | old numbers after a change | the solution is not re-solved: `femm_solve` |
+
+### Ratio FEM / estimate -> cause
+
+Measure the ratio first, then match it. The chain: `femm_problem_info` (units, depth, planar or
+axi) -> `femm_file_summary(path, arrays=False)` (turns, circuits, materials, bounding box) ->
+`femm_estimate(name, args, fem_value=<your number>)` -> read the `verdict` and the ratio.
+
+| Ratio | Likely cause | Check |
+|---|---|---|
+| 10 | depth entered in cm but units are mm (or the reverse) | `femm_problem_info`: depth and unit; `femm_problem_define(depth=...)` |
+| 1000 (or 1e-3) | mm vs m: an estimate argument in mm, or a model drawn in m with units mm | lengths given to `femm_estimate` are metres; compare the bounding box in `femm_file_summary` with the real size |
+| 1.414 | peak vs rms: AC phasors in FEMM are peak | convert one side; `femm_estimate` currents are as you pass them |
+| 1.5 | dq amplitude convention: 3/2 in the amplitude-invariant dq torque | `femm_estimate("dq_torque", ...)` is amplitude-invariant; check which convention your reference uses |
+| N (slots, poles or sector count) | full model vs a 1/N sector, or wrong slots / poles passed to the experiment | `slots` and `poles` are full-machine counts; `femm_file_summary` shows what is drawn |
+| 2 | two gaps or both poles counted: C-core force has two pole faces; a half model counted once | compare gap count in the estimate (`ccore_gap_b` uses the total gap) and the geometry |
+| sign only | reversed turns (+N / -N), or rotation direction | `femm_file_summary` net turns per circuit; WST torque (code 22) is about the origin, counter-clockwise positive (verified): a rotor off the origin or turned the other way flips or shifts it |
+
+A health check cannot catch these: a self-consistent wrong model (wrong depth, turns or units)
+passes every invariant (`femm-health-check/references/rules.md`, "Things the rules cannot see").
+Only the analytic estimate and a review of `femm_file_summary` do.
 
 ## GUI vs headless
 

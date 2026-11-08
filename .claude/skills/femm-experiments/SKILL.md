@@ -1,6 +1,6 @@
 ---
 name: femm-experiments
-description: Running and interpreting the standard FEMM 5 magnetics experiments through the femm MCP tools (femm_experiment_force_vs_position, femm_experiment_torque_vs_angle, femm_experiment_cogging, femm_experiment_backemf, femm_experiment_inductance, femm_experiment_ac_sweep, femm_experiment_parametric, femm_experiment_bh_check, femm_build_benchmark) - force-stroke curves, torque vs rotor angle, cogging torque by rotate-and-remesh and by the air-gap element, back-EMF and THD, Ld/Lq and inductance matrices, AC impedance sweeps, parametric studies and magnet operating points, with the numbers the benchmarks produced as sanity anchors. Use when the user asks for any sweep or characterisation of an actuator, solenoid, inductor or PM motor in FEMM.
+description: Running and interpreting the standard FEMM 5 magnetics experiments through the femm MCP tools (femm_experiment_force_vs_position, femm_experiment_torque_vs_angle, femm_experiment_cogging, femm_experiment_back_emf, femm_experiment_inductance, femm_experiment_ac_sweep, femm_experiment_parametric, femm_experiment_bh_check, femm_build_benchmark) - force-stroke curves, torque vs rotor angle, cogging torque by rotate-and-remesh and by the air-gap element, back-EMF and THD, Ld/Lq and inductance matrices, AC impedance sweeps, parametric studies and magnet operating points, with the numbers the benchmarks produced as sanity anchors. Use when the user asks for any sweep or characterisation of an actuator, solenoid, inductor or PM motor in FEMM.
 ---
 
 # FEMM experiments: standard tests with built-in checks
@@ -14,7 +14,10 @@ returns:
  "files": {"csv", "json", "png"}, "timing": {"total_s", "solves", "per_solve_s"}}
 ```
 
-Read `health_summary` first: each experiment carries its own consistency checks. More than 120 rows
+Read `health_summary` first (`verdict` PASS / CHECK / FAIL): each experiment carries its own
+consistency checks. Then `warnings` (for example "model is a 90 deg sector": torque and flux are for
+the sector as drawn). A requested group with no objects or a circuit that is not in the model is
+refused before the first solve, with the groups / circuits present in the message. More than 120 rows
 are thinned in the reply (the CSV has all). The JSON paths feed `femm_report` and
 `femm_compare_results`.
 
@@ -34,18 +37,40 @@ are thinned in the reply (the CSV has all). The JSON paths feed `femm_report` an
 
 | Tool | Key arguments | What you get | Built-in checks |
 |---|---|---|---|
-| `femm_experiment_force_vs_position` | `groups`, `dx`/`dy` per step (problem units), `steps`, `force_groups`, `start_offset` | position, Fx, Fy, force along motion, virtual-work force, coenergy, psi per circuit | WST force vs virtual work dW'/ds (8 % RMS of peak) |
+| `femm_experiment_force_vs_position` | `groups`, `dx`/`dy` per step (problem units), `steps`, `force_groups`, `start_offset` | position (displacement from the model as saved, not the gap), Fx, Fy, force along motion, virtual-work force, coenergy, psi per circuit; the model is re-solved at the saved position (`left_solved`) | WST force vs virtual work dW'/ds (8 % RMS of peak) |
 | `femm_experiment_torque_vs_angle` | `rotate_groups`, `start`/`stop`/`steps` or `angles`, `center`, `method` ("rotate"/"age"), `gap_boundary`, `torque_groups`, `drive` | torque, gap torque, virtual-work torque, coenergy, psi, currents (driven), dq torque | torque vs virtual work (10 % RMS of peak, fixed currents only), WST vs gap torque (10 %), ripple (informational), mean torque vs 3/2 p (psi_d iq - psi_q id) (8 %, driven) |
 | `femm_experiment_cogging` | `rotate_groups`, `slots`, `poles` (= 2p), `steps`, `periods`, `method`, `gap_boundary`, `torque_groups` | cogging torque over 360/lcm(Q, 2p) degrees, peak to peak, rms, harmonics per period and per revolution | zero mean (5 %), periodic end points (10 %), WST vs virtual work (15 %, rotate route) |
-| `femm_experiment_backemf` | `rotate_groups`, `pole_pairs`, `rpm`, `steps`, `circuits`, `method`, `gap_boundary`, `psi_estimate` | psi and EMF per phase over one electrical period, fundamental (peak, rms), THD, harmonics, line-line EMF, Ke | three-phase balance (3 %), half-wave antisymmetry (5 %), psi vs analytic (20 %) |
-| `femm_experiment_inductance` | `circuits`, `current`, or `dq` = {circuits, pole_pairs, theta0_deg, id, iq}, `torque_groups`/`gap_boundary` | L matrix from (psi(I) - psi(0)) / I; or psi_pm, Ld, Lq, saliency, dq torque vs FEM torque | W = 1/2 L I^2 (linear, no magnets), mutual reciprocity (3 %), FEM torque vs dq (15 %) |
+| `femm_experiment_back_emf` | `rotate_groups`, `poles` (= 2p), `rpm`, `steps`, `circuits`, `method`, `gap_boundary`, `psi_estimate` | psi and EMF per phase over one electrical period, fundamental (peak, rms), THD, harmonics, line-line EMF, Ke | three-phase balance (3 %), half-wave antisymmetry (5 %), psi vs analytic (20 %) |
+| `femm_experiment_inductance` | `circuits`, `current`, or `dq` = {circuits, poles, theta0_deg, id, iq}, `torque_groups`/`gap_boundary` | L matrix from (psi(I) - psi(0)) / I; or psi_pm, Ld, Lq, saliency, dq torque vs FEM torque | W = 1/2 L I^2 (linear, no magnets), mutual reciprocity (3 %), FEM torque vs dq (15 %) |
 | `femm_experiment_ac_sweep` | `frequencies` (Hz), `circuits`, `current` | Z, R(f), L(f) = Im Z / omega, losses total/resistive/hysteresis | 1/2 Re(V conj I) = total losses per frequency (5 %) |
+| `femm_experiment_inductance(currents=[...])` | `currents` list of distinct non-zero amps, `circuits` | rows [circuit, current_A, psi_Wb, L_secant_H, L_incremental_H]: secant (psi(I) - psi(0)) / I and incremental dpsi/dI by finite differences through the 0 A point; each circuit alone, one solve per current (a saturating core shows both falling with I) | energy check per point (W = 1/2 L I^2 for linear models without magnets) |
 | `femm_experiment_parametric` | `cases` [{name, params, commands}], `outputs` [{kind: point/block/circuit/gap/line/expr, ...}], `template` | one row per case | collected errors per case |
 | `femm_experiment_bh_check` | `min_fraction` (0.2) | per magnet label: mean and min B_m along magdir, H_m, Pc, B_m/Br | min B_m >= 0.2 Br (demagnetisation risk) |
 | `femm_build_benchmark` | `kind` (ccore, coilgun, spm, round_wire), `path`, `params` | a saved, validated model + groups, circuits, analytic estimates | (the anchors below) |
 
 Units: moves in problem units, angles in mechanical degrees, forces N, torque N*m, flux linkage
 Wb-turn, inductance H. Planar results include the model depth.
+
+## Force and L vs a cut gap, and foreign models
+
+- **Force / L vs a cut gap** (no dedicated tool): `femm_experiment_parametric` moving the armature
+  group per case, outputs force on the group and L of the circuit. Exact call and the
+  `str.format` brace caveat: `references/anchors.md` ("Parametric: force and L vs gap").
+  `femm_experiment_force_vs_position` is the direct tool when one run per position of the same
+  model suffices: its `position` is the displacement from the model as saved, so gap = g0 + position.
+- **Foreign .fem (a model you did not build)**, in this order:
+  1. `femm_open(path)`, then `femm_save(path=<copy>.fem)` (never experiment on the original);
+  2. `femm_file_summary(<copy>, arrays=False)`: find the air-gap circle (radius), circuits,
+     groups, materials, boundaries;
+  3. put the rotor and the rotor-side air layer in groups: `femm_select(kind="circle",
+     circle=[cx, cy, R_gap_mid], entities="all")` then `femm_set_group(n)` (check `femm_select`'s
+     `picked`; group, rectangle and circle selections return it empty, so confirm with
+     `femm_file_summary` afterwards);
+  4. `femm_solve()`;
+  5. `femm_health_check(rotor_groups=[...], stator_groups=[...])`;
+  6. then the experiment.
+  The rotate route needs a mid-gap circle that splits the air gap (otherwise rotating tears the
+  mesh). `slots` and `poles` are full-machine counts, even when the model is a sector.
 
 ## Choosing the rotor route
 
@@ -73,7 +98,7 @@ Run both on important results and compare with `femm_compare_results(a_json, b_j
   secant inductances about the PM operating point. At a single rotor position the FEM torque can
   differ from the dq value (12 % on the SPM because of the 27 % THD); the driven
   `femm_experiment_torque_vs_angle` mean is the fair comparison.
-- **Loaded torque**: `drive={"circuits": ["A","B","C"], "pole_pairs": p, "id": 0, "iq": 10,
+- **Loaded torque**: `drive={"circuits": ["A","B","C"], "poles": 2 * p, "id": 0, "iq": 10,
   "theta0_deg": 0}` makes the currents follow the rotor (amplitude-invariant dq, theta_e = p x angle +
   theta0, theta0 = electrical angle of the d-axis from phase A). The SPM benchmark has phase A's axis
   and the d-axis both at 0 degrees, so theta0 = 0 there.

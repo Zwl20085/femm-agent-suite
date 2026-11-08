@@ -14,12 +14,31 @@ experienced engineer checks by habit, plus closed-form references. Every rule re
 
 `ok: null` means "not applicable" and the message says why (e.g. energy identities with magnets).
 
+`femm_health_check` (`summary.verdict`) and every experiment (`health_summary.verdict`) roll the
+rules up into one word: **PASS** (none failed, at least one passed, none returned `ok: null`),
+**CHECK** (none failed, but nothing was applicable or some rule returned `ok: null`), **FAIL** (any
+rule `ok: false`). The machine verdict does not judge margins or weak rules: you still downgrade a
+PASS to CHECK yourself for a thin margin or a weak check (see "How to report"). Quote the verdict
+together with the numbers behind it.
+
+Unchecked solves are marked: `femm_solve` and `femm_load_solution` return `checked: false` and a
+`next` line naming the exact call (`femm_health_check(session=..., rotor_groups=[...])` with the
+label groups found in the model, or `femm_check_rule` for non-magnetic physics). The session's
+`checked` flag (in `femm_session_list`) is set only by `femm_health_check` and reset by every
+solve, load or experiment. Treat any number from a session that is not `checked` as unverified.
+`femm_report` returns `doubts`: "health check not run on this session", "health check verdict
+FAIL", "no analytic estimate attached" (cleared by `femm_estimate(..., fem_value=..., session=...)`,
+which records the comparison for the report; a CHECK / FAIL estimate is listed as a doubt itself),
+"planar depth left at default" and each experiment with failing checks;
+`femm_compare_results` returns them per side ("A: ...", "B: ..."). Copy the doubts into what you
+tell the user; never drop them.
+
 ## The three tools
 
 | Tool | Use |
 |---|---|
 | `femm_health_check` | All rules on the loaded **magnetics** solution (needs `femm_solve`). Saves the model if needed and reads the `.ans` for the element-to-material map. Nothing in the model is changed. |
-| `femm_check_rule` | One rule on numbers you already have (no FEMM call). `femm_check_rule("list")` lists them. The route for electrostatics, heat and current flow, and for experiment numbers. |
+| `femm_check_rule` | One rule on numbers you already have (no FEMM call). `femm_check_rule("list")` lists them. The AC power balance is `power_balance_ac` (alias `power_balance`). The route for electrostatics, heat and current flow, and for experiment numbers. |
 | `femm_estimate` | Closed-form reference values (SI units). `femm_estimate()` lists the 25 formulas with their arguments. |
 
 ## femm_health_check: what runs, and what to pass
@@ -47,7 +66,7 @@ femm_health_check(
 | pm | `pm_operating_point[...]` | min B_m along magdir >= 0.2 Br per magnet label | magnets present |
 
 Extra rows: `solution_matches_model` fails when the `.ans` on disk does not match the loaded mesh
-(re-solve). `summary` = {total, passed, failed, not_applicable, failing, all_ok}; `facts` carries
+(re-solve). `summary` = {total, passed, failed, not_applicable, failing, all_ok, verdict}; `facts` carries
 element count, max B, energy, coenergy, torques, forces, P_in, P_loss.
 
 Known weak spot: when `rotor_groups` and `stator_groups` are complementary, the WST weights of the
@@ -61,13 +80,18 @@ Rule details, formulas and what a failure usually means: `references/rules.md`.
 | Group | Names |
 |---|---|
 | coils and wires | `solenoid_b_infinite`, `solenoid_b_axis_finite`, `thick_solenoid_b_center`, `loop_b_axis`, `solenoid_inductance_long`, `wire_inductance_per_length`, `straight_wire_b` |
-| magnetic circuits | `ccore_gap_b`, `ccore_inductance`, `reluctance`, `maxwell_force`, `carter_coefficient` |
+| magnetic circuits | `ccore_gap_b`, `ccore_inductance`, `reluctance`, `maxwell_force`, `carter_factor` (alias `carter_coefficient`) |
 | permanent magnets | `pm_load_line`, `spm_gap_b`, `spm_flux_linkage_fundamental`, `demag_margin` |
 | machines | `dq_torque`, `dq_torque_from_inductances`, `emf_from_flux_linkage`, `cogging_period_deg` |
 | electrostatics / conduction / AC | `parallel_plate_capacitance`, `coax_capacitance_per_length`, `bar_resistance`, `skin_depth`, `round_wire_internal_impedance` |
 
-All arguments are SI (m, A, T, S/m); FEMM works in problem units and MS/m, so convert. Compare
-with `femm_check_rule("compare_to_estimate", {"name": ..., "fem_value": ..., "estimate": ...,
+All arguments are SI (m, A, T, S/m); FEMM works in problem units and MS/m, so convert. Each reply
+has `unit`, `formula`, `assumptions`, `expected_fea_tolerance_pct`; pass `fem_value=` (same SI
+unit) to get `verdict` directly (`femm_estimate("ccore_gap_b", {...}, fem_value=0.238)`): PASS when
+the difference is within the tolerance, CHECK within twice it (explain the gap before using either
+number), FAIL beyond, with `diff_pct` and `ratio_fem_over_formula`. `femm_estimate()` with no name
+lists every formula with its arguments and tolerance. Pole counts are `poles` (= 2p;
+`pole_pairs` is an alias). To compare by hand, use `femm_check_rule("compare_to_estimate", {"name": ..., "fem_value": ..., "estimate": ...,
 "tolerance": 0.15, "why": "fringing"})`. The expected agreement is the idealisation error of the
 formula, not solver precision: C-core gap B 1 %, C-core force 6 %, C-core inductance 1.55x the
 formula (fringing and leakage), solenoid centre field 0.7 %, SPM flux linkage 7 %.

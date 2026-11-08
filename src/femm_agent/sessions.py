@@ -22,8 +22,16 @@ class Session:
     physics: str | None = None        # set by newdocument/opendocument
     document: str | None = None       # path of the current document (after save/open)
     solved: bool = False              # a solution has been loaded into the postprocessor
+    checked: bool = False             # femm_health_check ran on the loaded solution (reset by every solve/load)
     created: float = field(default_factory=time.time)
     notes: dict[str, Any] = field(default_factory=dict)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        # any change to the loaded solution (solve, load, open, raw calls, experiments) makes the
+        # previous femm_health_check stale; only femm_health_check sets checked = True again
+        if name == "solved":
+            object.__setattr__(self, "checked", False)
+        object.__setattr__(self, name, value)
 
     @property
     def pre(self) -> str:
@@ -54,7 +62,7 @@ class Session:
         return {
             "name": self.name, "port": self.link.port, "pid": self.link.pid, "headless": self.link.headless,
             "connected": self.link.connected, "physics": self.physics, "document": self.document,
-            "solved": self.solved, "work_dir": str(self.work_dir), "calls": self.link.stats["calls"],
+            "solved": self.solved, "checked": self.checked, "work_dir": str(self.work_dir), "calls": self.link.stats["calls"],
             "errors": self.link.stats["errors"], "uptime_s": round(time.time() - self.created, 1),
         }
 

@@ -12,7 +12,7 @@ flow and current flow, and show you the physics checks that prove each number.**
 ![Python](https://img.shields.io/badge/python-3.10%2B-3776AB)
 ![FEMM](https://img.shields.io/badge/FEMM-5.0-0b6e99)
 ![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-555)
-![Tools](https://img.shields.io/badge/MCP%20tools-89-6f42c1)
+![Tools](https://img.shields.io/badge/MCP%20tools-91-6f42c1)
 ![Skills](https://img.shields.io/badge/Claude%20skills-11-ff7b00)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -46,7 +46,11 @@ flow and current flow, and show you the physics checks that prove each number.**
 The agent uses the MCP tools and the skill family below. Every tool answers with
 `{"ok", "result" | "error": {"message", "hint"}, "session", "seconds"}`, errors carry the next
 action as a hint, and the skills teach the agent to back each number with a health check and an
-analytic estimate before calling it a result.
+analytic estimate before calling it a result. The server enforces the last part too: a solve
+returns `checked: false` with the exact `femm_health_check(...)` call to make next, health checks
+roll up into one `verdict` (PASS / CHECK / FAIL), `femm_estimate(..., fem_value=)` grades a FEM
+number against its formula, and `femm_report` lists its `doubts`. Clients without skills call
+`femm_guide`; `femm_doctor` (or `python -m femm_agent --doctor`) diagnoses the install.
 
 <table><tr>
 <td width="50%"><img src="docs/images/ccore_force_vs_gap.png" alt="C-core armature force vs gap: weighted stress tensor, virtual work and analytic curve"></td>
@@ -78,7 +82,7 @@ An agent still cannot just "call FEMM". It needs:
   the four material libraries, and a record of FEMM 5 behaviour verified live.
 
 This suite is meant as the golden-standard library a future finite element workflow can build on:
-an [MCP](https://modelcontextprotocol.io) server with 89 tools, a pure-Python engineering layer
+an [MCP](https://modelcontextprotocol.io) server with 91 tools, a pure-Python engineering layer
 (health rules, estimates, experiments, file parser), and eleven
 [Claude skills](https://docs.claude.com/en/docs/claude-code/skills) that teach the agent how a
 FEMM user works and when not to trust a number.
@@ -148,11 +152,11 @@ The console script `femm-mcp` is the same server.
 
 ## Tool groups
 
-89 tools in 12 groups. One line per tool: [`.claude/skills/femm/references/tool-map.md`](.claude/skills/femm/references/tool-map.md).
+91 tools in 12 groups. One line per tool: [`.claude/skills/femm/references/tool-map.md`](.claude/skills/femm/references/tool-map.md).
 
 | Group | Tools | Headline tools |
 |---|---:|---|
-| session | 6 | `femm_status`, `femm_session_open`, `femm_selftest` |
+| session | 7 | `femm_status`, `femm_doctor`, `femm_session_open`, `femm_selftest` |
 | document | 7 | `femm_new_document`, `femm_open`, `femm_save`, `femm_problem_define` |
 | geometry | 18 | `femm_draw_polygon`, `femm_add_arcs`, `femm_select`, `femm_copy_selected`, `femm_import_dxf`, `femm_geometry_summary` |
 | properties | 10 | `femm_add_block_label`, `femm_add_boundary`, `femm_add_circuit`, `femm_add_conductor` |
@@ -160,8 +164,8 @@ The console script `femm-mcp` is the same server.
 | mesh and solve | 4 | `femm_solve`, `femm_create_mesh`, `femm_smartmesh` |
 | post-processing | 10 | `femm_point_values`, `femm_block_integral`, `femm_circuit_results`, `femm_field_stats`, `femm_gap_results`, `femm_make_plot` |
 | scripting | 6 | `femm_call`, `femm_eval`, `femm_run_script`, `femm_run_lua`, `femm_export_pyfemm_script` |
-| docs | 5 | `femm_api_search`, `femm_api_get`, `femm_manual_section`, `femm_facts` |
-| experiments | 9 | `femm_experiment_cogging`, `femm_experiment_torque_vs_angle`, `femm_experiment_backemf`, `femm_experiment_inductance`, `femm_experiment_ac_sweep`, `femm_build_benchmark` |
+| docs | 6 | `femm_guide`, `femm_api_search`, `femm_api_get`, `femm_manual_section`, `femm_facts` |
+| experiments | 9 | `femm_experiment_cogging`, `femm_experiment_torque_vs_angle`, `femm_experiment_back_emf`, `femm_experiment_inductance`, `femm_experiment_ac_sweep`, `femm_build_benchmark` |
 | health | 3 | `femm_estimate`, `femm_check_rule`, `femm_units_convert` |
 | report | 5 | `femm_health_check`, `femm_report`, `femm_compare_results`, `femm_plot_field`, `femm_file_summary` |
 
@@ -203,15 +207,17 @@ proving a 12-slot / 4-pole motor, the validation table, the skills and the insta
 MCP client (Claude Code, ...)
    |  stdio
    v
-femm_agent.server  ---- 12 tool groups, 89 tools, envelope {ok, result | error{message, hint}}
+femm_agent.server  ---- 12 tool groups, 91 tools, envelope {ok, result | error{message, hint}}
    |-- sessions.py      named FEMM engines: port, pid, physics, open document, solved flag, work dir
    |     `-- ipc.py     FemmLink: TCP 127.0.0.1, one MicroPython line per request, reply parsing,
    |                    timeouts, journal of every line sent (no pyFEMM import needed)
    |-- catalog.py       data/commands.json: 677 commands, arguments, returns, code tables
    |-- materials.py     data/materials/*.json + the installed .dat libraries, 4.2 rename map
-   |-- experiments.py   force-position, torque-angle, cogging, back-EMF, inductance, AC sweep, parametric
+   |-- experiments.py   force-position, torque-angle, cogging, back-EMF (+ experiments_sweeps.py:
+   |                    inductance / L(I), AC sweep, parametric; preflight.py: groups, circuits, sectors)
    |-- health.py        pure physics invariants (unit tested)    diagnostics.py  live health check
-   |-- estimate.py      25 closed-form references                units.py        conversions
+   |-- estimate.py      25 closed-form references (+ estimate_meta.py: unit, assumptions, tolerance, verdict)
+   |-- guide.py / doctor.py   skills for skill-less clients, environment diagnosis      units.py  conversions
    |-- benchmarks.py    validated models: ccore, coilgun, spm, round_wire
    `-- femfile.py, plotting.py, reporting.py   file parser, field maps, Markdown reports
                          |

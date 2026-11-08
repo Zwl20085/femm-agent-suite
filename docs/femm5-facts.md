@@ -428,3 +428,58 @@ experiments, health rules and file parser. Numbers come from `tests/test_experim
 - If another client is already connected to an engine's port, a second connect gets
   `femm-qt is already connected to another client`. Tests and examples pick their own free port
   (`ipc.pick_free_port(49xxx)`) so that they can run next to other sessions.
+
+## Settled in 0.2.0 (verified live on FEMM 5.0 build 20261101, 1144)
+
+Measured with the suite on Windows, headless; scripts in the 0.2.0 engineering notes.
+
+- **force_vs_position restore state.** After `femm_experiment_force_vs_position(groups=[1],
+  dy=0.25, steps=5)` on the ccore benchmark the saved model's bounding box is unchanged, and the
+  loaded solution is the one at the saved position: |B| at the gap probe 0.238047886 T and WST Fy
+  -9.739062903 N, identical to all printed digits before and after. The experiment re-solves the
+  restored model (`left_solved: true`); if that last solve fails the result says
+  `left_solved: false`, the session has no solution and the reply carries `next: femm_solve(...)`.
+  The sweep uses moves and their exact inverse, so no drift was seen at 9-10 significant digits.
+- **WST torque (block integral 22): about the origin, counter-clockwise positive.** The ccore
+  armature (group 1, Fx 0.0104 N, Fy -4.6017 N, T22 -0.000344 N*m) was translated with the whole
+  model by +100 mm in x: T22 became -0.460520 N*m against x*Fy - y*Fx = -0.460516 N*m predicted
+  for torque about (0, 0) (unchanged if it were about the body). So T22 = sum of r x F about the
+  origin, positive counter-clockwise (+z), the same sense as a positive `mi_moverotate` angle; the
+  experiments' `center` argument only sets the rotation centre of the move, not the torque centre.
+  Put the rotor axis at the origin.
+- **Planar conductor results are totals over the depth.** Coax a = 1 mm, b = 10 mm, depth 100
+  mm, 1 V: `eo_getconductorproperties("in")` charge 2.4221e-12 C vs 2 pi eps0 / ln(b/a) x depth =
+  2.4161e-12 C (C/m would be 2.4161e-11). Heat flow, same geometry, k = 1 W/(m K), dT = 1 K:
+  `ho_getconductorproperties` heat flux 0.27355 W vs 2 pi k dT / ln(b/a) x depth = 0.27288 W. Both
+  0.25 % (mesh). Current flow: a 20 x 10 mm slab, sigma 1 S/m, 1 V across 20 mm, depth 100 mm:
+  `co_getconductorproperties` current 0.0500 A = sigma V / L x height x depth (per metre would be
+  0.5). Divide by the depth (in metres) for per-metre values.
+- **Unassigned outer edges are zero-normal-flux (natural) boundaries** in heat flow and
+  electrostatics: a 20 x 10 mm slab with T (or V) = 1 on the left edge, 0 on the right and nothing
+  on the top and bottom gives 0.75000 / 0.50000 / 0.25000 at x = 5 / 10 / 15 mm, at the top and
+  bottom edges alike (linear profile, no flux through the free edges).
+- **femm_build_benchmark("ccore", params={"gap": g}) sets each of the two gaps to g** (one
+  armature bar over both legs). With gap = 1.5 mm, |B| at the centre of the left and right gap:
+  0.16090 / 0.16077 T. The analytic estimate uses the total gap 2g.
+- **Brace in a parametric template.** Templates are formatted with Python `str.format(**params)`
+  in the server, before FEMM sees them: `"d = {'a': 1}"` fails that case with
+  `KeyError: "'a'"`, a missing key `{J}` with `KeyError: 'J'`; the error is recorded in
+  `summary.errors` for that case and the other cases still run (the base model is re-opened per
+  case). Doubled braces `{{'a': 1}}` work.
+- **Renaming a circuit drops its label links.** `mi_modifycircprop("coil", 0, "X")` on the ccore
+  benchmark leaves circuit `X` with no block labels in the saved file (0 turns); a circuit added
+  with `mi_addcircprop` has none either until labels are assigned. Such a circuit reads psi = 0, so
+  the experiments refuse it (pre-flight) and `energy_vs_flux_linkage` fails 0 = 0 with a current.
+- **Command drift on build 20261101.** Every pre-processor (`mi_/ei_/hi_/ci_`) and magnetics
+  post-processor (`mo_`) command the engine defines is in `data/commands.json`; the catalog
+  entries the engine lacks are all the pyFEMM-only helpers already flagged `pyfemm_only`
+  (`mi_setcurrent`, `mi_addbhpoints`, `*_snapgridon/off`, `*_hidenames`, `mo_getb` ...). The
+  pyFEMM binding shipped with this build matches the catalog (`tests/test_catalog_vs_pyfemm.py`).
+
+## Open questions (unverified)
+
+- **Periodic sector handling in experiments.** Since 0.2.0 the experiments detect a sector from
+  periodic / antiperiodic boundary segments and add a `warnings` entry (results are for the sector
+  as drawn; slots / poles are full-machine counts and must be whole per sector). The numbers of a
+  sector model against the full model have not been compared live; the WST torque of a sector is
+  the torque on what is drawn (it is an integral over the drawn blocks).

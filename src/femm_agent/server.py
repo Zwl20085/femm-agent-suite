@@ -22,12 +22,15 @@ ENGINEERING_GROUPS = ["experiments", "health", "report"]
 
 INSTRUCTIONS = (
     "Drive FEMM 5 (2D finite elements: magnetics, electrostatics, heat flow, current flow). "
-    "Start with femm_status; femm_selftest checks the install end to end. Typical flow: "
-    "femm_new_document -> femm_problem_define -> geometry (femm_draw_*) -> femm_material_load -> "
-    "femm_add_block_label -> femm_add_boundary -> femm_solve -> femm_point_values / "
-    "femm_block_integral / femm_circuit_results. Lengths are in the problem units, angles in "
-    "degrees. Every tool returns {ok, result | error{message, hint}}; follow the hint on errors. "
-    "femm_call reaches any FEMM command; femm_api_search finds them."
+    "If your client did not load the femm skills, call femm_guide first. "
+    "Loop: 1 femm_status; 2 femm_new_document / femm_open; 3 geometry (femm_problem_define, femm_draw_*); "
+    "4 femm_material_load, femm_add_block_label, femm_add_boundary, femm_add_circuit; 5 femm_solve; "
+    "6 femm_health_check; 7 femm_point_values / femm_block_integral / femm_circuit_results / femm_experiment_* "
+    "-> femm_report. Rules: ok:false is a stop sign - read error.hint and act on it before anything else; "
+    "no number is reported before femm_health_check (or an experiment's health_summary) has run on it, and "
+    "every FAIL / CHECK and every femm_report doubt is passed on. Lengths are in the problem units, angles "
+    "in degrees. femm_call reaches any FEMM command; femm_api_search finds them; femm_doctor diagnoses the "
+    "install."
 )
 
 log = logging.getLogger("femm_agent")

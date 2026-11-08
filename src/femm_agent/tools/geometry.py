@@ -119,8 +119,10 @@ def register(mcp, ctx: ToolContext) -> None:
 
     @mcp.tool()
     def femm_add_segments(segments: list[list[Any]], session: str = "main") -> dict:
-        """Add straight segments [[[x1,y1],[x2,y2]], ...] (or [x1,y1,x2,y2] each). End nodes are
-        created as needed. Segments that cross are split by FEMM at the intersection."""
+        """Add straight segments in problem units (axisymmetric: x is r >= 0). `segments` is
+        [[[x1,y1],[x2,y2]], ...] or [[x1,y1,x2,y2], ...]. Missing end nodes are created. Segments that cross are
+        split by FEMM at the intersection. Segments only bound regions: add a block label inside each closed
+        region afterwards (femm_add_block_label). Example: femm_add_segments([[0,0,10,0],[10,0,10,5]])."""
         def run(s: Session):
             for g in segments:
                 add_segment(s, *_seg(g))
@@ -144,8 +146,10 @@ def register(mcp, ctx: ToolContext) -> None:
 
     @mcp.tool()
     def femm_draw_rectangle(x1: float, y1: float, x2: float, y2: float, session: str = "main") -> dict:
-        """Axis-aligned rectangle with opposite corners (x1,y1), (x2,y2): 4 nodes + 4 segments.
-        Add a block label inside it afterwards (femm_add_block_label)."""
+        """Axis-aligned rectangle in problem units with opposite corners (x1,y1), (x2,y2): creates 4 nodes and 4
+        segments (existing nodes are reused; corner order does not matter). It creates no block label: add one
+        inside with femm_add_block_label. Axisymmetric: x is r and must be >= 0.
+        Example: femm_draw_rectangle(0, 0, 20, 5)."""
         def run(s: Session):
             s.pre_call("drawrectangle", x1, y1, x2, y2)
             return {"corners": [[x1, y1], [x2, y2]], "centre": [(x1 + x2) / 2, (y1 + y2) / 2]}
@@ -175,21 +179,22 @@ def register(mcp, ctx: ToolContext) -> None:
 
     @mcp.tool()
     def femm_draw_polyline(points: list[list[float]], session: str = "main") -> dict:
-        """Open chain of segments through [[x, y], ...] (not closed). Same as femm_draw_polygon(closed=False)."""
+        """Open chain of straight segments through `points` [[x, y], ...] (problem units, at least 2 points). The
+        last point is not joined to the first. Same as femm_draw_polygon(closed=False); use femm_draw_polygon for
+        a closed outline. Add a block label inside any closed region you form. Example:
+        femm_draw_polyline([[0,0],[5,0],[5,3]])."""
         return run_tool(ctx, session, lambda s: {"segments": polyline(s, points, False)}, need="document")
 
     @mcp.tool()
     def femm_select(kind: str, points: list[list[float]] | None = None, rectangle: list[float] | None = None,
                     circle: list[float] | None = None, group: int | None = None, entities: str = "all",
                     clear_first: bool = True, session: str = "main") -> dict:
-        """Select objects for a following edit (femm_move_selected, femm_delete_selected,
-        femm_set_group ...). kind:
-          nodes | segments | arcs | labels  -> nearest object to each of `points` [[x, y], ...]
-          group     -> every object in `group`
-          rectangle -> objects inside rectangle=[x1, y1, x2, y2]
-          circle    -> objects inside circle=[cx, cy, R]
-        entities (rectangle/circle only): nodes|segments|labels|arcs|all.
-        Returns what FEMM reports for each pick (the coordinates of the selected object)."""
+        """Select objects for the next edit (femm_set_group, femm_delete_selected, femm_move_selected ...). `kind`:
+        nodes | segments | arcs | labels (nearest object to each of `points` [[x,y]]); group (needs `group`);
+        rectangle (`rectangle`=[x1,y1,x2,y2]); circle (`circle`=[cx,cy,R]). `entities` for rectangle/circle:
+        nodes|segments|labels|arcs|all. `clear_first` (default True) clears the previous selection; False adds
+        to it. Returns {kind, picked: [...]}: one entry per point pick (the selected object's coordinates);
+        group / rectangle / circle give an empty `picked`, so verify the effect another way (femm_file_summary)."""
         def run(s: Session):
             if clear_first:
                 s.pre_call("clearselected")
@@ -223,13 +228,18 @@ def register(mcp, ctx: ToolContext) -> None:
 
     @mcp.tool()
     def femm_clear_selected(session: str = "main") -> dict:
-        """Deselect everything in the pre-processor."""
+        """Deselect everything in the pre-processor. Edit tools that act on a selection (femm_move_selected,
+        femm_set_group, femm_delete_selected ...) use the current selection. femm_select clears first by default,
+        so call this only to abandon a selection. Needs an open document. The post-processor block selection is
+        separate (femm_block_integral manages its own)."""
         return run_tool(ctx, session, lambda s: s.pre_call("clearselected"), need="document")
 
     @mcp.tool()
     def femm_delete_selected(kind: str = "all", session: str = "main") -> dict:
-        """Delete the current selection. kind: all | nodes | segments | arcs | labels
-        (deleting nodes also deletes segments/arcs attached to them)."""
+        """Delete the current selection (made with femm_select). `kind`: all | nodes | segments | arcs | labels
+        (default all). Deleting nodes also deletes the segments and arcs attached to them. Not undoable except by
+        re-opening the saved file, so check what femm_select picked first. Example:
+        femm_select(kind="rectangle", rectangle=[0,0,5,5]); femm_delete_selected(kind="segments")."""
         def run(s: Session):
             cmd = {"all": "deleteselected", "nodes": "deleteselectednodes", "segments": "deleteselectedsegments",
                    "arcs": "deleteselectedarcsegments", "labels": "deleteselectedlabels"}.get(kind)
@@ -277,7 +287,10 @@ def register(mcp, ctx: ToolContext) -> None:
     @mcp.tool()
     def femm_mirror_selected(x1: float, y1: float, x2: float, y2: float, entities: str | None = None,
                              session: str = "main") -> dict:
-        """Mirror-copy the selection about the line through (x1,y1)-(x2,y2) (the original stays)."""
+        """Mirror-copy the selection about the line through (x1,y1)-(x2,y2) (problem units). The original stays, so
+        the selection is duplicated, not moved. `entities` (nodes | segments | labels | arcs | all, default all)
+        restricts what is mirrored. Use it to complete a symmetric model from half. Example:
+        femm_mirror_selected(0, -1, 0, 1) mirrors about the y axis."""
         def run(s: Session):
             ea = _action(entities)
             s.pre_call("mirror", x1, y1, x2, y2, *([ea] if ea is not None else []))
@@ -287,7 +300,10 @@ def register(mcp, ctx: ToolContext) -> None:
     @mcp.tool()
     def femm_scale_selected(factor: float, about: list[float] | None = None, entities: str | None = None,
                             session: str = "main") -> dict:
-        """Scale the selection by `factor` about `about`=[x, y] (default origin)."""
+        """Scale the selection by `factor` (> 0, dimensionless) about `about`=[x, y] (problem units, default the
+        origin). Uniform scaling only. It changes geometry only: problem depth, turns and currents stay, so
+        fields and results change. `entities` optionally restricts the object kind. Example:
+        femm_scale_selected(2.0, about=[0, 0]) doubles every selected dimension."""
         def run(s: Session):
             bx, by = _pt(about) if about else (0.0, 0.0)
             ea = _action(entities)
@@ -297,8 +313,10 @@ def register(mcp, ctx: ToolContext) -> None:
 
     @mcp.tool()
     def femm_set_group(group: int, session: str = "main") -> dict:
-        """Put the selected objects into group number `group` (used for moving rotors, for
-        femm_block_integral(group=...) and femm_field_stats(region='group:N'))."""
+        """Put the current selection into group number `group` (integer; 0 = no group). Groups move or rotate parts
+        (femm_move_selected, experiments' rotor/force groups), and feed femm_block_integral(group=[...]) and
+        femm_field_stats(region="group:N"). A block's group is that of its label (femm_set_block_prop group=).
+        Typical: femm_select(kind="circle", circle=[0,0,R], entities="all"); femm_set_group(1)."""
         return run_tool(ctx, session, lambda s: s.pre_call("setgroup", int(group)) or {"group": group}, need="document")
 
     @mcp.tool()
@@ -321,7 +339,9 @@ def register(mcp, ctx: ToolContext) -> None:
 
     @mcp.tool()
     def femm_export_dxf(path: str, session: str = "main") -> dict:
-        """Write the current geometry to a DXF file (xi_savedxf)."""
+        """Write the current geometry (nodes, segments, arcs; not labels or properties) to a DXF file (xi_savedxf).
+        `path`: absolute path, forward slashes; it is written by the engine. Needs an open document. Units follow
+        the problem units. Check the file exists afterwards. For a model you can reopen use femm_save instead."""
         def run(s: Session):
             p = resolve_path(s, path)
             if not p.lower().endswith(".dxf"):

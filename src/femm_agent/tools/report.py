@@ -8,7 +8,7 @@ from typing import Any
 
 from .. import diagnostics, experiments, femfile, reporting
 from ..sessions import Session
-from ._common import ToolContext, ToolInputError, envelope, run_tool
+from ._common import ToolContext, ToolInputError, envelope, run_tool, session_estimates
 
 
 def _saved_model(s: Session) -> str:
@@ -28,45 +28,56 @@ def register(mcp: Any, ctx: ToolContext) -> None:
                           stator_groups: list[int] | None = None, force_groups: list[int] | None = None,
                           reaction_groups: list[int] | None = None, flux_lines: list[list[list[float]]] | None = None,
                           b_limit: float = 1.8, session: str = "main") -> dict:
-        """Judge whether the loaded magnetics solution is physically sane. Needs femm_solve first.
-        Runs (subset via `checks`): mesh (element count, worst triangle angle), precision, energy
-        (W = W' and W = 1/2 sum I psi for linear models without magnets), saturation (share of steel
-        above `b_limit` T; linear iron over 2.2 T), boundary (|B| at the outer boundary vs peak),
-        torque (WST on rotor_groups vs -stator_groups; air-gap element torque if present), force
-        (force_groups vs -reaction_groups), ac (1/2 Re(V conj I) = losses), flux (two cuts
-        [[p1,p2],[p3,p4]] must carry the same flux), pm (magnet operating points).
-        Returns {checks: [{name, ok, value, expected, tolerance, message}], summary, facts}."""
+        """Judge a loaded magnetics solution against physics invariants. Needs the model saved and femm_solve done.
+        `checks`: subset of mesh, precision, energy, saturation, boundary, torque, force, ac, flux, pm (default all
+        that apply). `rotor_groups` / `stator_groups`: group numbers for the torque check (WST on one vs minus the
+        other); `force_groups` / `reaction_groups`: same for force; `flux_lines`: [[[x1,y1],[x2,y2]],
+        [[x3,y3],[x4,y4]]], two cuts that must carry equal flux; `b_limit`: saturation threshold in T (default
+        1.8). Returns {checks: [{name, ok, value, expected, tolerance, message}], summary, facts}; summary.verdict
+        is PASS (none failed, >= 1 passed, none inconclusive), CHECK (nothing applicable or some ok=null) or FAIL
+        (any failed). Marks the session `checked` until the next solve/load. Invariants pass self-consistent wrong
+        models: also compare a key number with femm_estimate(name, args, fem_value=...)."""
         def go(s: Session) -> Any:
             if s.physics != "magnetics":
                 raise ToolInputError("femm_health_check covers magnetics models", "Open a .fem model and solve it.")
             path = _saved_model(s)
-            return diagnostics.run(s.link, path, checks, rotor_groups=rotor_groups, stator_groups=stator_groups,
-                                   force_groups=force_groups, reaction_groups=reaction_groups, flux_lines=flux_lines,
-                                   b_limit=b_limit)
+            res = diagnostics.run(s.link, path, checks, rotor_groups=rotor_groups, stator_groups=stator_groups,
+                                  force_groups=force_groups, reaction_groups=reaction_groups, flux_lines=flux_lines,
+                                  b_limit=b_limit)
+            s.checked = True
+            return res
         return run_tool(ctx, session, go, need="solution")
 
     @mcp.tool()
     def femm_report(title: str = "FEMM analysis report", include: list[str] | None = None,
                     experiment_files: list[str] | None = None, zoom: list[float] | None = None,
                     notes: str | None = None, session: str = "main") -> dict:
-        """Write report.md + report.json (+ figures/) to <work_dir>/reports/<timestamp>/.
-        include (default all): "model" (parsed model summary), "health" (femm_health_check on the
-        loaded solution), "field" (|B| map PNG from the bulk mesh arrays, `zoom` = [xmin, xmax, ymin,
-        ymax] in problem units), "experiments" (this session's experiment results, or the result
-        .json paths in `experiment_files`). Returns the paths; open report.md to read it."""
+        """Write report.md + report.json (+ figures/field_B.png) to <work_dir>/reports/<YYYYMMDD-HHMMSS>/. Needs a
+        model; the health and field sections also need a magnetics solution (femm_solve), else they are skipped
+        and named in `warnings`. `include` (default all): model, health, field, experiments; `experiment_files`:
+        result .json paths (default this session's experiments); `zoom` [xmin,xmax,ymin,ymax] for the |B| map;
+        `notes` free text. Returns the written paths, warnings, experiments_included and `doubts`: reasons not to
+        take the numbers at face value ("health check not run on this session", "no analytic estimate
+        attached", "planar depth left at default", experiments with failing checks). Relay every doubt to the
+        user; open report.md to read it."""
         inc = set(include or ["model", "health", "field", "experiments"])
 
         def go(s: Session) -> Any:
             out_dir = s.work_dir / "reports" / time.strftime("%Y%m%d-%H%M%S")
             out_dir.mkdir(parents=True, exist_ok=True)
             summary = checks = None
+            depth_summary = None
             figs: list[tuple[str, str]] = []
             warnings: list[str] = []
             if s.physics:
                 path = _saved_model(s)
+                sol = femfile.solution_path(path)
+                try:
+                    depth_summary = femfile.parse_file(sol if (s.solved and sol.is_file()) else path).summary()
+                except Exception as e:
+                    warnings.append(f"model summary unreadable: {e}")
                 if "model" in inc:
-                    sol = femfile.solution_path(path)
-                    summary = femfile.parse_file(sol if (s.solved and sol.is_file()) else path).summary()
+                    summary = depth_summary
                 if s.solved and s.physics == "magnetics":
                     if "health" in inc:
                         try:
@@ -93,6 +104,10 @@ def register(mcp: Any, ctx: ToolContext) -> None:
                                          figures=figs, notes=notes)
             res["warnings"] = warnings
             res["experiments_included"] = len(exps)
+            ran_health = bool(s.checked or checks)
+            res["doubts"] = reporting.doubts(experiments=exps, checks=checks or [], model_summary=depth_summary,
+                                             health_run=ran_health if s.physics == "magnetics" else None,
+                                             estimates=session_estimates(ctx, s))
             return res
         return run_tool(ctx, session, go)
 
@@ -101,7 +116,9 @@ def register(mcp: Any, ctx: ToolContext) -> None:
         """A/B comparison of two experiment results (paths to the experiment .json files, or JSON
         text): every numeric summary value and every common numeric column (rows matched on the first
         column, e.g. angle). Use it to compare mesh refinements, the rotate vs air-gap-element
-        methods, or two designs. Differences beyond `rtol` are flagged."""
+        methods, or two designs. Differences beyond `rtol` are flagged. `doubts` (per side) lists
+        failing experiment checks, a planar depth left at 1 unit and the lack of an analytic
+        reference: a match between two unchecked results proves nothing."""
         return envelope(lambda: reporting.compare_results(a, b, rtol, label_a, label_b))
 
     @mcp.tool()

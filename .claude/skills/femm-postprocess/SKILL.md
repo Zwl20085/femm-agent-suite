@@ -49,7 +49,7 @@ Magnetics defaults: `[2, 17, 5, 10, 7]`. Planar results are for the full depth.
 | 1 | A | 17 | magnetic coenergy (J) |
 | 2 | magnetic field energy (J) | 18 / 19 | weighted stress tensor force x/r, y/z (N), steady-state |
 | 3 | hysteresis and/or lamination losses (W) | 20 / 21 | WST force x/r, y/z, 2x |
-| 4 | resistive losses (W) | 22 | WST torque (N*m), steady-state |
+| 4 | resistive losses (W) | 22 | WST torque (N*m), steady-state; about the origin, counter-clockwise positive (verified) |
 | 5 | cross-section area | 23 | WST torque, 2x |
 | 6 | total losses (W) | 24 | R^2 (moment of inertia / density) |
 | 7 | total current (A) | 25 / 26 | WST force x/r, y/z, 1x |

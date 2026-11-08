@@ -4,8 +4,8 @@ from __future__ import annotations
 import inspect
 from typing import Any
 
-from .. import estimate, health, units
-from ._common import ToolContext, ToolInputError, envelope
+from .. import estimate_meta, health, units
+from ._common import ToolContext, ToolInputError, envelope, record_estimate
 
 
 def _doc(fn) -> str:
@@ -15,31 +15,48 @@ def _doc(fn) -> str:
 def register(mcp: Any, ctx: ToolContext) -> None:
 
     @mcp.tool()
-    def femm_estimate(name: str | None = None, args: dict | None = None) -> dict:
-        """Analytic sanity references in SI units (m, A, T, H, N, N*m). Call with no name to list the
-        formulas and their arguments. Examples:
+    def femm_estimate(name: str | None = None, args: dict | None = None, fem_value: float | None = None,
+                      session: str | None = None) -> dict:
+        """Analytic sanity references in SI units (m, A, T, H, N, N*m). Call with no name to list every
+        formula with its argument names, unit and expected FEM agreement. Examples:
         femm_estimate("ccore_gap_b", {"turns": 200, "current": 2, "gap": 0.002, "iron_path": 0.18, "mu_r": 2000});
-        femm_estimate("dq_torque", {"pole_pairs": 2, "psi_d": 0.05, "psi_q": 0, "i_d": 0, "i_q": 10});
-        femm_estimate("skin_depth", {"freq": 1000, "sigma": 58e6}). Others: solenoid / loop / thick-
-        solenoid fields, inductances, Maxwell force B^2 A/2mu0, Carter coefficient, PM load line, SPM
-        gap flux and flux linkage, cogging period, capacitances, resistance, round-wire AC impedance.
-        Compare FEMM results to these within the idealisation error (fringing, leakage, saturation)."""
+        femm_estimate("dq_torque", {"poles": 4, "psi_d": 0.05, "psi_q": 0, "i_d": 0, "i_q": 10});
+        femm_estimate("skin_depth", {"freq": 1000, "sigma": 58e6}). Pole counts: `poles` (= 2p, preferred)
+        or `pole_pairs` (alias), exactly one. `carter_factor` is an alias of `carter_coefficient`.
+        Returns {name, value, unit, formula, assumptions, expected_fea_tolerance_pct}. Pass your FEMM
+        number as `fem_value` (same SI unit) to also get `verdict`: PASS (within the tolerance), CHECK
+        (within 2x: explain the gap before using it) or FAIL, with diff_pct and the FEM/formula ratio -
+        this replaces a separate femm_check_rule("compare_to_estimate", ...). With `session` (and
+        fem_value) the comparison is recorded for that session, so femm_report counts it as the
+        analytic reference (and lists a CHECK / FAIL verdict among its doubts). No engine is started."""
         def go() -> Any:
             if not name:
-                return {k: {"args": list(inspect.signature(f).parameters), "formula": _doc(f)}
-                        for k, f in estimate.ESTIMATES.items()}
-            f = estimate.ESTIMATES.get(name)
+                # same shape as 0.1 ({name: {args, formula}}), richer entries
+                return {k: {kk: v for kk, v in estimate_meta.describe(k).items() if kk != "name"}
+                        for k in estimate_meta.names()}
+            f = estimate_meta.function(name)
             if f is None:
-                raise ToolInputError(f"unknown estimate {name!r}", "Call femm_estimate() with no name to list them.")
+                raise ToolInputError(f"unknown estimate {name!r}",
+                                     f"Use one of {estimate_meta.names()} (femm_estimate() lists their arguments).")
+            a = estimate_meta.normalize_args(name, args)
             try:
-                v = f(**(args or {}))
+                v = f(**a)
             except TypeError as e:
-                raise ToolInputError(str(e), f"Arguments of {name}: {list(inspect.signature(f).parameters)}")
+                raise ToolInputError(str(e), f"Arguments of {name}: {estimate_meta.args_of(name)} (SI units).")
+            out = estimate_meta.describe(name)
+            out.pop("args", None)
+            if fem_value is not None:
+                out.update(estimate_meta.verdict(fem_value, v, out["expected_fea_tolerance_pct"]))
+                if session:
+                    rec = {"name": name, "value": v if isinstance(v, (int, float)) else None,
+                           **{k: out.get(k) for k in ("verdict", "fem_value", "diff_pct", "tolerance_pct", "unit")}}
+                    record_estimate(ctx, session, rec)
+                    out["recorded_for_session"] = session
             if isinstance(v, complex):
                 v = {"re": v.real, "im": v.imag}
             elif isinstance(v, tuple):
                 v = list(v)
-            return {"name": name, "value": v, "formula": _doc(f)}
+            return {"name": name, "value": v, **{k: x for k, x in out.items() if k != "name"}}
         return envelope(go)
 
     @mcp.tool()
@@ -68,21 +85,29 @@ def register(mcp: Any, ctx: ToolContext) -> None:
 
     @mcp.tool()
     def femm_check_rule(rule: str, args: dict | None = None) -> dict:
-        """Run one pure physics rule on numbers you already have (no FEMM call). Call with rule='list'
-        to see them. Examples: femm_check_rule("energy_consistency", {"energy": 0.0149, "flux_linkages":
-        [0.0149], "currents": [2]}); femm_check_rule("power_balance", {"p_input": 1.2, "p_losses": 1.19});
-        femm_check_rule("force_consistency", {"f_a": -9.7, "f_b": -9.2, "tolerance": 0.1}).
+        """Run one pure physics rule on numbers you already have (no FEMM call, SI units). rule="list" lists them.
+        Names include energy_consistency, power_balance_ac (alias power_balance), force_consistency. Examples:
+        femm_check_rule("energy_consistency", {"energy":0.0149,"flux_linkages":[0.0149],"currents":[2]});
+        femm_check_rule("power_balance_ac", {"p_input":1.2,"p_losses":1.19});
+        femm_check_rule("force_consistency", {"f_a":-9.7,"f_b":-9.2,"tolerance":0.1}).
         Returns {name, ok, value, expected, tolerance, message}."""
         rules = {k: getattr(health, k) for k in (
             "energy_consistency", "energy_coenergy_linear", "flux_conservation", "saturation", "linear_material_overflux",
             "mesh_size", "mesh_quality", "solver_precision", "boundary_distance", "force_consistency",
             "curve_consistency", "torque_ripple", "zero_mean", "power_balance", "skin_depth_resolution",
             "pm_operating_point", "compare_to_estimate")}
+        rules["power_balance_ac"] = rules.pop("power_balance")
+        aliases = {"power_balance": "power_balance_ac"}
 
         def go() -> Any:
             if rule == "list":
-                return {k: {"args": list(inspect.signature(f).parameters), "doc": _doc(f)} for k, f in rules.items()}
-            f = rules.get(rule)
+                listed = {}
+                for k, f in rules.items():
+                    al = [a for a, t in aliases.items() if t == k]
+                    key = f"{k} (alias: {', '.join(al)})" if al else k
+                    listed[key] = {"args": list(inspect.signature(f).parameters), "doc": _doc(f)}
+                return listed
+            f = rules.get(aliases.get(rule, rule))
             if f is None:
                 raise ToolInputError(f"unknown rule {rule!r}", "Call femm_check_rule('list').")
             try:
