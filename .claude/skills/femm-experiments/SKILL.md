@@ -15,8 +15,11 @@ returns:
 ```
 
 Read `health_summary` first (`verdict` PASS / CHECK / FAIL): each experiment carries its own
-consistency checks. Then `warnings` (for example "model is a 90 deg sector": torque and flux are for
-the sector as drawn). A requested group with no objects or a circuit that is not in the model is
+consistency checks. Then `warnings`, and on a 1/N sector model `full_machine` {factor, rule,
+summary, notes}: rows and summary are as drawn; flux linkage, EMF, Ke, inductance, coenergy and
+losses are x N for the full machine; the air-gap element torque (`method="age"`) is already
+full-machine, and the derived torques in the rows (virtual work, dq) are put on that footing.
+Report the `full_machine` values for a machine, the as-drawn ones only for the sector itself. A requested group with no objects or a circuit that is not in the model is
 refused before the first solve, with the groups / circuits present in the message. More than 120 rows
 are thinned in the reply (the CSV has all). The JSON paths feed `femm_report` and
 `femm_compare_results`.
@@ -46,7 +49,7 @@ are thinned in the reply (the CSV has all). The JSON paths feed `femm_report` an
 | `femm_experiment_inductance(currents=[...])` | `currents` list of distinct non-zero amps, `circuits` | rows [circuit, current_A, psi_Wb, L_secant_H, L_incremental_H]: secant (psi(I) - psi(0)) / I and incremental dpsi/dI by finite differences through the 0 A point; each circuit alone, one solve per current (a saturating core shows both falling with I) | energy check per point (W = 1/2 L I^2 for linear models without magnets) |
 | `femm_experiment_parametric` | `cases` [{name, params, commands}], `outputs` [{kind: point/block/circuit/gap/line/expr, ...}], `template` | one row per case | collected errors per case |
 | `femm_experiment_bh_check` | `min_fraction` (0.2) | per magnet label: mean and min B_m along magdir, H_m, Pc, B_m/Br | min B_m >= 0.2 Br (demagnetisation risk) |
-| `femm_build_benchmark` | `kind` (ccore, coilgun, spm, round_wire), `path`, `params` | a saved, validated model + groups, circuits, analytic estimates | (the anchors below) |
+| `femm_build_benchmark` | `kind` (ccore, coilgun, spm, round_wire), `path`, `params` (spm: `{"sector": N}` for 1/N of the machine, AGE route) | a saved, validated model + groups, circuits, analytic estimates (sector: `scale_to_full_machine`) | (the anchors below) |
 
 Units: moves in problem units, angles in mechanical degrees, forces N, torque N*m, flux linkage
 Wb-turn, inductance H. Planar results include the model depth.
@@ -70,7 +73,8 @@ Wb-turn, inductance H. Planar results include the model depth.
   5. `femm_health_check(rotor_groups=[...], stator_groups=[...])`;
   6. then the experiment.
   The rotate route needs a mid-gap circle that splits the air gap (otherwise rotating tears the
-  mesh). `slots` and `poles` are full-machine counts, even when the model is a sector.
+  mesh). `slots` and `poles` are full-machine counts, even when the model is a sector. Sectors need
+  `method="age"` (rotate-and-remesh cannot keep the periodic cut lines matched).
 
 ## Choosing the rotor route
 

@@ -2,7 +2,7 @@
   "name": "femm",
   "displayName": "FEMM Agent Suite",
   "description": "Drive FEMM 5 from Claude: MCP server, physics health checks, standard experiments and skills for 2D magnetic, electrostatic, thermal and current-flow FEA.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "author": { "name": "Zwl20085" },
   "homepage": "https://github.com/Zwl20085/femm-agent-suite",
   "repository": "https://github.com/Zwl20085/femm-agent-suite",

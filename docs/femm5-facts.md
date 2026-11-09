@@ -241,20 +241,25 @@ specifications (`docs/*-file-formats.pdf`, text versions of each `*-fmt` note) d
 
 ## 9. Unverified or open items
 
-- Return layout of `ei_/hi_/ci_getprobleminfo` (assumed to mirror `eo_/ho_/co_getprobleminfo`); only
-  `mi_getprobleminfo` was observed.
+- *Settled (build 20261101):* `ei_/hi_/ci_getprobleminfo` return three values `[type (0 planar),
+  depth (problem units), length unit (m)]` - no frequency, not even for current flow
+  (`ci_probdef(..., frequency=0, ..., depth=37)` gave `[0, 37, 0.001]`); `mi_getprobleminfo` returns
+  four, `[type, frequency, depth, unit]` (`[0, 0, 37, 0.001]`). `data/commands.json` corrected.
 - Meaning of the `acsolver` values 0/1 in `mi_probdef` beyond the file-format note (0 successive
   approximation, 1 Newton, from the `.fem` format table `[ACSolver]`).
 - `propnum` index maps of the `*_modify*prop` commands: the manual tables are column-misaligned in the
   plain-text conversion; the maps in `commands.json` follow the argument order of the matching `add` command
   (only `mi_modifycircprop` index 1 and `mi_modifymaterial` index 4 were exercised live).
-- Whether `xo_makeplot` returns the number of sampled points (observed `10` for 10 points) is undocumented.
+- *Settled (build 20261101):* `mo_makeplot(0, 10, file, 0)` headless returns 10 (the number of
+  points) and writes an 11-line CSV (header + 10 rows). Not documented in the manual.
 - Typos in the manual's plain-text tables: `co_getpointvalues` calls `ox, oy` "permittivity"; the
   `*_makeplot` and `co_blockintegral` tables are shifted by one row in the extracted text (the order used in
   the catalog was confirmed for `co_blockintegral` against `docs/co_blockintegral_cases.csv`).
 - Headless behaviour of GUI-only view commands (`xo_zoom`, `xo_showdensityplot`, `main_*`): registered, but
   their effect without a window was not tested.
-- 3-5x speed-up claim and "material renames" are unverified (see section 5).
+- 3-5x speed-up claim is unverified (see section 5). The material renames are verified on build
+  20261101 for the cases the self-test exercises: `mi_getmaterial("M-19 Steel")` fails with
+  `Couldn't load "M-19 Steel" from the materials library`, `M-19 14 mil` loads.
 
 ## Verified by the core-server build
 
@@ -476,10 +481,47 @@ Measured with the suite on Windows, headless; scripts in the 0.2.0 engineering n
   (`mi_setcurrent`, `mi_addbhpoints`, `*_snapgridon/off`, `*_hidenames`, `mo_getb` ...). The
   pyFEMM binding shipped with this build matches the catalog (`tests/test_catalog_vs_pyfemm.py`).
 
+## Sector models (verified live on FEMM 5.0 build 20261101, 1144; 0.2.1)
+
+`femm_build_benchmark("spm", params={"sector": N})` draws 1/N of the 12-slot 4-pole SPM benchmark
+with the same dimensions, winding and rotor orientation: one periodic (2 poles per sector) or
+antiperiodic (1 pole per sector) boundary per region crossed by each radial cut line, and an
+(anti)periodic air-gap element (`AGE`, BdryFormat 6 / 7) spanning the sector. Experiments on it
+use `method="age"`.
+
+- **Rotate-and-remesh does not work on a sector.** Rotating the rotor turns its radial cut lines
+  away from the stator's, so the periodic pairs stop matching; the builder refuses
+  `rotor_method="rotate"` with a sector and the experiments warn. The air-gap element route works.
+- **Scale rule, measured** (full machine, AGE route, vs N = 2 periodic and N = 4 antiperiodic
+  sectors; same experiment settings; elements 10592 / 5270 / 2636):
+
+  | Quantity (phase A) | Full machine | N = 2 sector x factor | diff | N = 4 sector x factor | diff |
+  |---|---|---|---|---|---|
+  | open-circuit flux linkage, fundamental (Wb) | 0.0476384 | 0.0238199 x 2 = 0.0476398 | +0.003 % | 0.0119104 x 4 = 0.0476416 | +0.007 % |
+  | back-EMF fundamental at 1000 rpm (V peak) | 9.97737 | 4.98883 x 2 = 9.97766 | +0.003 % | 2.49451 x 4 = 9.97804 | +0.007 % |
+  | line-line EMF fundamental (V) | 17.2795 | 8.64036 x 2 = 17.2807 | +0.007 % | 4.32059 x 4 = 17.2823 | +0.017 % |
+  | cogging peak to peak, `mo_gapintegral` (N m) | 0.383545 | 0.383385 x 1 | -0.042 % | 0.383439 x 1 | -0.027 % |
+  | mean torque, id = 0, iq = 10 A, 0-30 deg (N m) | 1.41208 | 1.41229 x 1 | +0.015 % | 1.41258 x 1 | +0.035 % |
+  | self inductance at 5 A (H) | 3.73903e-4 | 1.87090e-4 x 2 = 3.74180e-4 | +0.074 % | 9.35794e-5 x 4 = 3.74318e-4 | +0.111 % |
+
+  At one loaded position (5 deg, iq = 10 A) block-integral coenergy and energy of the sector are
+  1/N of the full machine (ratios 2.00005 / 4.00024 and 1.99998 / 3.99986) and |B| in the gap is
+  the same (0.1844 / 0.2551 T components, within 0.3 %).
+- So: **flux linkage, EMF, Ke, inductance, coenergy and energy of a sector are x N** (each series
+  circuit holds one sector's coils), **the air-gap element torque (`mo_gapintegral(..., 0)`) of a
+  sector is already the full-machine torque (x 1)**, flux density, currents and angles are x 1.
+  The weighted-stress-tensor torque (block integral 22) on the rotor of an AGE model reads ~0
+  (1e-16 N m, full and sector alike): the air-gap element encloses the rotor; use
+  `mo_gapintegral` there.
+- What the experiments do with it since 0.2.1: on a sector whose angle divides 360, rows and
+  summary stay as drawn and the result adds `full_machine` = {factor N, rule, summary (scaled
+  keys), notes}; derived torques are put on the full-machine footing of the gap torque (virtual
+  work from N x coenergy, dq torque from N x psi), so the torque checks compare like with like
+  (before 0.2.1 `mean_torque_vs_dq` failed on sectors by the factor N). A sector torque from the
+  weighted stress tensor (rotate route on a user's own sector) has no measured scale: it is left
+  out of `full_machine` and the dq torque check is not applicable.
+
 ## Open questions (unverified)
 
-- **Periodic sector handling in experiments.** Since 0.2.0 the experiments detect a sector from
-  periodic / antiperiodic boundary segments and add a `warnings` entry (results are for the sector
-  as drawn; slots / poles are full-machine counts and must be whole per sector). The numbers of a
-  sector model against the full model have not been compared live; the WST torque of a sector is
-  the torque on what is drawn (it is an integral over the drawn blocks).
+None left from the 0.2.0 audit. Section 9 above lists older items; the ones settled live are marked
+there.

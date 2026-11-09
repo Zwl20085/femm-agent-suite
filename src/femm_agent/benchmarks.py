@@ -14,6 +14,7 @@ metadata dict: the group numbers to move/rotate, circuit names, and the analytic
 from __future__ import annotations
 
 import math
+import sys
 from typing import Any
 
 from . import estimate
@@ -205,7 +206,7 @@ def build_spm(link, path: str, *, slots: int = 12, poles: int | None = None, pol
               magnet_t: float = 3.0, gap: float = 1.5, stator_or: float = 50.0, slot_open: float = 2.0,
               tip_h: float = 1.0, slot_w: float = 5.0, slot_depth: float = 12.0, depth: float = 50.0,
               turns_per_slot: int = 20, steel: str = "M-19 14 mil", magnet: str = "N42",
-              rotor_method: str = "rotate", mesh_gap: float = 0.5, mesh_magnet: float = 1.5, mesh_iron: float = 2.5,
+              rotor_method: str | None = None, sector: int | None = None, mesh_gap: float = 0.5, mesh_magnet: float = 1.5, mesh_iron: float = 2.5,
               mesh_coil: float = 2.5, smartmesh: bool = False,
               precision: float = 1e-8) -> dict[str, Any]:
     """Planar inner-rotor surface-PM machine (mm). Defaults: 12 slots, 4 poles, N42, M-19 14 mil,
@@ -218,10 +219,32 @@ def build_spm(link, path: str, *, slots: int = 12, poles: int | None = None, pol
 
     Phase A's magnetic axis and the d-axis (north pole of magnet 0) are both at 0 deg mechanical
     when the rotor angle is 0. Circuits ``A``, ``B``, ``C`` (series, 0 A). Pole count: ``poles``
-    (2p, preferred) or ``pole_pairs`` (p), at most one; default 4 poles."""
+    (2p, preferred) or ``pole_pairs`` (p), at most one; default 4 poles.
+
+    ``sector=N`` draws 1/N of the same machine (see :mod:`femm_agent.benchmarks_sector`): periodic
+    or antiperiodic cut lines and an (anti)periodic air-gap element, so only
+    ``rotor_method='age'`` (the default for sectors) is possible. Full-machine flux linkage, EMF,
+    torque and inductance are N x the sector values (``scale_to_full_machine``)."""
     p = 2 if poles is None and pole_pairs is None else estimate.resolve_pole_pairs(poles, pole_pairs, "build_spm")
     Rm = rotor_r + magnet_t          # magnet outer radius
     Rs = Rm + gap                   # stator bore
+    if sector and int(sector) > 1:
+        from . import benchmarks_sector as bs
+        if rotor_method not in (None, "age"):
+            raise bs.SectorError(f"rotor_method={rotor_method!r} cannot run on a sector",
+                                 "Use rotor_method='age' (the default for sectors): rotate-and-remesh turns the rotor's "
+                                 "cut lines off the stator's, so the periodic pairs no longer match.")
+        info = bs.build_spm_sector(link, path, sector=int(sector), slots=slots, p=p, rotor_r=rotor_r,
+                                   magnet_t=magnet_t, gap=gap, stator_or=stator_or, slot_open=slot_open, tip_h=tip_h,
+                                   slot_w=slot_w, slot_depth=slot_depth, depth=depth, turns_per_slot=turns_per_slot,
+                                   steel=steel, magnet=magnet, mesh_gap=mesh_gap, mesh_magnet=mesh_magnet,
+                                   mesh_iron=mesh_iron, mesh_coil=mesh_coil, smartmesh=smartmesh, precision=precision,
+                                   helpers=sys.modules[__name__])
+        meta = _spm_meta(path, slots, p, rotor_r, Rm, Rs, stator_or, magnet_t, gap, slot_open, depth, turns_per_slot,
+                         magnet, steel, spm_slot_phases(slots, p, 180.0 / slots), "age", [1], "AGE")
+        meta.update(info)
+        return meta
+    rotor_method = rotor_method or "rotate"
     link.call("newdocument", 0)
     link.call("mi_probdef", 0, "millimeters", "planar", precision, depth, 30)
     link.call("mi_smartmesh", 1 if smartmesh else 0)
@@ -316,8 +339,13 @@ def build_spm(link, path: str, *, slots: int = 12, poles: int | None = None, pol
     else:
         raise ValueError("rotor_method must be 'rotate' or 'age'")
     _save(link, path)
+    return _spm_meta(path, slots, p, rotor_r, Rm, Rs, stator_or, magnet_t, gap, slot_open, depth, turns_per_slot,
+                     magnet, steel, phases, rotor_method, rotate_groups, bdry)
 
-    # ---- analytic references
+
+def _spm_meta(path, slots, p, rotor_r, Rm, Rs, stator_or, magnet_t, gap, slot_open, depth, turns_per_slot, magnet,
+              steel, phases, rotor_method, rotate_groups, bdry) -> dict[str, Any]:
+    """Metadata and analytic references of an SPM benchmark (full-machine values)."""
     br = 1.30 if magnet.upper().startswith("N4") else 1.2
     kc = estimate.carter_coefficient(2 * math.pi * Rs / slots, slot_open, gap)
     bg = estimate.spm_gap_b(br, 1.05, magnet_t, gap, kc)

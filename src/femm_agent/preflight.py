@@ -147,22 +147,86 @@ def sector_extent_deg(model: Any, center: Sequence[float] = (0.0, 0.0)) -> float
     return span if 1.0 < span < 359.0 else None
 
 
-def sector_warnings(model: Any, center: Sequence[float] = (0.0, 0.0), slots: int | None = None,
-                    poles: int | None = None) -> list[str]:
-    """Warnings when the model is a sector but the experiment is described by full-machine counts:
-    the FEM torque / flux linkage are for the sector as drawn (scale by 360/extent unless the
-    circuits already hold the full-machine turns), and Q, 2p must be whole numbers per sector."""
+SCALE_RULE = ("sector model, N = 360 / sector angle (measured on FEMM 5 build 20261101, 12-slot 4-pole SPM, "
+              "N = 2 and 4, within 0.05 %): flux linkage, EMF, Ke, inductance, coenergy, energy, losses and "
+              "resistance of the series circuits x N (the circuits hold one sector's coils); air-gap element torque "
+              "(mo_gapintegral) is already the full-machine torque (x 1); flux density, currents and angles x 1")
+
+# summary keys per experiment that scale with N ("flux") or follow the torque source ("torque")
+_SCALED = {
+    "back_emf": {"flux": ("psi_fundamental_Wb", "emf_fundamental_peak_V", "emf_fundamental_rms_V", "ke_V_per_rad_s",
+                          "emf_line_line_peak_V", "emf_line_line_fundamental_V", "harmonics_phase1"), "torque": ()},
+    "cogging": {"flux": (), "torque": ("peak_to_peak_Nm", "rms_Nm", "harmonics")},
+    "torque_vs_angle": {"flux": (), "torque": ("mean_torque_Nm", "max_torque_Nm", "min_torque_Nm", "peak_to_peak_Nm")},
+    "inductance": {"flux": ("L_matrix_H", "self_H", "psi_pm_Wb", "Ld_H", "Lq_H", "L_secant_H", "L_incremental_H",
+                            "psi_at_zero_Wb"),
+                   "torque": ("torque_fem_at_iq_Nm", "torque_fem_at_id_iq_Nm"),
+                   "full": ("torque_dq_at_iq_Nm", "torque_dq_at_id_iq_Nm", "saliency_Lq_over_Ld")},
+    "ac_sweep": {"flux": ("R_ohm", "L_H"), "torque": ()},
+}
+
+
+def sector_factor(model: Any, center: Sequence[float] = (0.0, 0.0)) -> tuple[float | None, int | None]:
+    """(sector angle in deg, N) for a rotational sector whose angle divides 360; (angle, None) when it
+    does not divide 360; (None, None) for no sector."""
     ext = sector_extent_deg(model, center)
+    if ext is None:
+        return None, None
+    n = 360.0 / ext
+    return ext, (int(round(n)) if abs(n - round(n)) < 1e-3 and round(n) >= 2 else None)
+
+
+def _scale(v: Any, k: float) -> Any:
+    if isinstance(v, bool) or v is None:
+        return v
+    if isinstance(v, (int, float)):
+        return v * k
+    if isinstance(v, dict):
+        return {a: (_scale(b, k) if a not in ("order", "order_per_period", "order_per_rev") else b) for a, b in v.items()}
+    if isinstance(v, (list, tuple)):
+        return [_scale(x, k) for x in v]
+    return v
+
+
+def full_machine(experiment: str, summary: dict, n: int, torque_from_gap: bool) -> dict:
+    """Full-machine values of a sector experiment (pure): the `flux` keys of `summary` times N, the
+    `torque` keys times 1 when the torque comes from the air-gap element (already full machine),
+    omitted otherwise (weighted-stress-tensor torque of a sector: scale not measured); `full` keys
+    (dq torques computed from N x psi) as they are."""
+    keys = _SCALED.get(experiment, {"flux": (), "torque": ()})
+    vals = {k: _scale(summary[k], n) for k in keys["flux"] if k in summary}
+    vals.update({k: summary[k] for k in keys.get("full", ()) if k in summary})   # computed full-machine already
+    note = ["torque columns in rows (air-gap element, virtual work x N, dq from N x psi) are full-machine"
+            if torque_from_gap else "rows are as drawn"]
+    if torque_from_gap:
+        vals.update({k: summary[k] for k in keys["torque"] if k in summary})
+    elif keys["torque"]:
+        note.append("torque from the weighted stress tensor of a sector: full-machine scale not measured, not given")
+    return {"factor": int(n), "rule": SCALE_RULE, "summary": vals, "notes": note}
+
+
+def sector_warnings(model: Any, center: Sequence[float] = (0.0, 0.0), slots: int | None = None,
+                    poles: int | None = None, method: str | None = None) -> list[str]:
+    """Warnings for a sector model: what the as-drawn numbers mean (see SCALE_RULE; the experiments
+    add a `full_machine` block), that the rotate route cannot work on one, and that Q, 2p must be
+    whole numbers per sector (they are full-machine counts)."""
+    ext, n = sector_factor(model, center)
     if ext is None:
         return []
     k = 360.0 / ext
-    out = [f"model is a {ext:.4g} deg sector (periodic/antiperiodic boundaries found): torque and flux linkage are "
-           f"for the sector as drawn; multiply by {k:.4g} for the full machine unless the circuit turns already "
-           "represent the full machine."]
-    for label, n in (("slots", slots), ("poles", poles)):
-        if n:
-            per = n / k
+    if n:
+        out = [f"model is a {ext:.4g} deg sector (1/{n} of the machine): rows and summary are as drawn; flux linkage, "
+               f"EMF, inductance, coenergy and losses are x {n} for the full machine, air-gap element torque is "
+               "already full-machine; `full_machine` holds the scaled values."]
+    else:
+        out = [f"model is a {ext:.4g} deg sector, which does not divide 360: no full-machine values are given."]
+    if method == "rotate":
+        out.append("rotate-and-remesh on a sector turns the rotor's periodic cut lines off the stator's: use "
+                   "method='age' with an (anti)periodic air-gap element.")
+    for label, cnt in (("slots", slots), ("poles", poles)):
+        if cnt:
+            per = cnt / k
             if abs(per - round(per)) > 1e-6 or round(per) == 0:
-                out.append(f"{label}={n} gives {per:.3g} per {ext:.4g} deg sector (not a whole number): pass the "
+                out.append(f"{label}={cnt} gives {per:.3g} per {ext:.4g} deg sector (not a whole number): pass the "
                            f"full-machine {label} count, or check the sector angle.")
     return out

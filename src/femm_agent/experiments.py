@@ -120,7 +120,15 @@ def _preflight_rotation(run: Run, rotate_groups: Sequence[int], method: str, tor
     if drive:
         estimate.pole_pairs_of(drive, "drive")
         run.require_circuits(list(drive.get("circuits", ["A", "B", "C"])), "drive.circuits")
-    run.warn_sector(center, slots, poles)
+    run.warn_sector(center, slots, poles, method)
+    run.torque_from_gap = method == "age"
+
+
+def _torque_scale(run: Run) -> int:
+    """Factor that puts derived torques (virtual work from coenergy) on the footing of the measured
+    torque: on a 1/N sector the air-gap element torque is already full-machine while coenergy is
+    per sector (measured, docs/femm5-facts.md), so x N; 1 otherwise."""
+    return run.flux_scale if run.torque_from_gap else 1
 
 
 def _rotation_sweep(run: Run, angles: list[float], rotate_groups: Sequence[int], center: Sequence[float],
@@ -231,7 +239,8 @@ def torque_vs_angle(link, rotate_groups: Sequence[int] = (1,), *, angles: Sequen
     if drive:
         _restore_currents(run)
     tq = [r["torque"] for r in recs]
-    vw = health.virtual_work_derivative([math.radians(a) for a in angs], [r["coenergy"] for r in recs])
+    k = _torque_scale(run)
+    vw = [v * k for v in health.virtual_work_derivative([math.radians(a) for a in angs], [r["coenergy"] for r in recs])]
     rows = []
     for r, v in zip(recs, vw):
         row = [r["angle"], r["torque"], r.get("torque_gap"), v, r["coenergy"]] + [r["flux"][c] for c in circuits]
@@ -255,12 +264,17 @@ def torque_vs_angle(link, rotate_groups: Sequence[int] = (1,), *, angles: Sequen
         t_dq = []
         for r in recs:
             th = math.radians(p * r["angle"] + float(drive.get("theta0_deg", 0.0)))
-            pd, pq = estimate.park(*(r["flux"][c] for c in names), th)
+            pd, pq = estimate.park(*(r["flux"][c] * run.flux_scale for c in names), th)
             t_dq.append(estimate.dq_torque(p, pd, pq, float(drive.get("id", 0.0)), float(drive.get("iq", 0.0))))
         pts = tq[:-1] if len(tq) > 2 else tq
         dts = t_dq[:-1] if len(t_dq) > 2 else t_dq
-        run.checks.append(health.force_consistency(sum(pts) / len(pts), sum(dts) / len(dts), "mean FEM torque",
-                                                   "mean 3/2 p (psi_d i_q - psi_q i_d)", 0.08, name="mean_torque_vs_dq"))
+        if run.sector_n and not run.torque_from_gap:
+            run.checks.append(health.not_applicable("mean_torque_vs_dq", "WST torque of a sector: full-machine scale "
+                                                    "not measured (use method='age')"))
+        else:
+            run.checks.append(health.force_consistency(sum(pts) / len(pts), sum(dts) / len(dts), "mean FEM torque",
+                                                       "mean 3/2 p (psi_d i_q - psi_q i_d)", 0.08,
+                                                       name="mean_torque_vs_dq"))
         for row, v in zip(rows, t_dq):
             row.append(v)
         cols.append("torque_dq_Nm")
@@ -303,7 +317,8 @@ def cogging(link, rotate_groups: Sequence[int] = (1,), *, slots: int, poles: int
     finally:
         _restore_currents(run)
     tq = [r["torque"] for r in recs]
-    vw = health.virtual_work_derivative([math.radians(a) for a in angs], [r["coenergy"] for r in recs])
+    k = _torque_scale(run)
+    vw = [v * k for v in health.virtual_work_derivative([math.radians(a) for a in angs], [r["coenergy"] for r in recs])]
     one = tq[:-1] if len(tq) > 2 else tq
     per_samples = int(round(len(one) / periods)) if periods >= 1 else len(one)
     h = estimate.harmonics(one[:per_samples])
@@ -402,7 +417,8 @@ def back_emf(link, rotate_groups: Sequence[int] = (1,), *, poles: int | None = N
         run.checks.append({"name": "half_wave_antisymmetry", "ok": anti < 0.05, "value": anti, "expected": 0.0,
                            "tolerance": 0.05, "message": f"psi(theta + T/2) + psi(theta) peaks at {anti:.2%} of peak psi"})
     if psi_estimate:
-        run.checks.append(health.compare_to_estimate("psi_pm_vs_analytic", psi1[circuits[0]], psi_estimate, 0.2,
+        run.checks.append(health.compare_to_estimate("psi_pm_vs_analytic", psi1[circuits[0]] * run.flux_scale,
+                                                     psi_estimate, 0.2,
                                                      "flat-gap SPM estimate; leakage and slotting lower the FEM value"))
     el = [pole_pairs * a for a in angs]
     plots = [("psi", lambda p: plotting.plot_curves(p, el, {c: psi[c].tolist() for c in circuits},

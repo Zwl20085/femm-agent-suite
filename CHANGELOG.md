@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.2.1 (2026-11-09)
+
+Closes the last open item of 0.2.0 (sector models), measured on FEMM 5.0 build 20261101 (1144).
+
+- `femm_build_benchmark("spm", params={"sector": N})` (`benchmarks_sector.py`): 1/N of the SPM
+  benchmark with one periodic / antiperiodic boundary per region on each cut line and an
+  (anti)periodic air-gap element; refuses `rotor_method="rotate"` (rotate-and-remesh cannot keep
+  the cut lines matched) and sectors that do not divide the slots, poles or winding.
+- Measured scale rule (full machine vs N = 2 and N = 4, 12-slot 4-pole SPM, all within 0.12 %):
+  flux linkage, EMF, inductance, coenergy and energy of a sector are x N; the air-gap element
+  torque (`mo_gapintegral`) of a sector is already the full-machine torque. The 0.2.0 warning
+  ("torque and flux linkage are for the sector as drawn; multiply by N") was wrong for the torque.
+- Experiments on a 1/N sector add `full_machine` {factor, rule, summary, notes} (rows and summary
+  stay as drawn). Virtual-work and dq torques are put on the full-machine footing of the gap torque,
+  so `mean_torque_vs_dq`, `torque_vs_virtual_work`, `torque_fem_vs_dq` and `psi_pm_vs_analytic` no
+  longer fail on sectors by the factor N; with WST torque on a sector the dq checks are not
+  applicable. `inductance` and `ac_sweep` now detect sectors too.
+- Pre-flight refusal no longer rewrites the session document: when the file on disk equals FEMM's
+  state, FEMM is pointed back by close / re-open / reload instead of `mi_saveas` (it still saves
+  when there are unsaved edits).
+- Settled live: `ei_/hi_/ci_getprobleminfo` return `[type, depth, unit]` (no frequency, also for
+  current flow; `data/commands.json` return text corrected), `mo_makeplot` returns the number of
+  points, the 4.2 material-rename error path. docs/femm5-facts.md has no open questions left from
+  the audit.
+- Tests: `tests/test_sector.py` (fixture geometry from FEMM-written sector files, scale logic,
+  builder commands, refusal path), `tests/live/test_live_sector.py` (sector x N vs full machine).
+
 ## 0.2.0 (2026-11-08)
 
 Theme: an agent must not get a wrong or unchecked number out of the server silently. Every

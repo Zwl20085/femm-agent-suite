@@ -69,6 +69,10 @@ Extra rows: `solution_matches_model` fails when the `.ans` on disk does not matc
 (re-solve). `summary` = {total, passed, failed, not_applicable, failing, all_ok, verdict}; `facts` carries
 element count, max B, energy, coenergy, torques, forces, P_in, P_loss.
 
+Sector models: the experiment checks compare like with like (air-gap element torque, which is
+already full-machine, against virtual work from N x coenergy and dq torque from N x psi); with
+weighted-stress-tensor torque on a sector the dq check is not applicable (scale not measured).
+
 Known weak spot: when `rotor_groups` and `stator_groups` are complementary, the WST weights of the
 two selections are 1 - w of each other, so the torque balance is close to automatic. Virtual work
 (`femm_experiment_torque_vs_angle`, `femm_experiment_cogging`) is the independent check.

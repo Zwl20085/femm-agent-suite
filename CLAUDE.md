@@ -45,6 +45,8 @@ MCP client --stdio--> server.py (mcp>=2 MCPServer, falls back to mcp 1.x FastMCP
                         |     |                          imported by both modules above, imports neither
                         |     `-- preflight.py   groups (labels for WST groups) / circuits with coil labels exist,
                         |                        rotational-sector detection (before any solve)
+                        |-- benchmarks.py / benchmarks_sector.py  validated models (ccore, coilgun, spm, round_wire;
+                        |                   spm sector=N: 1/N with (anti)periodic cut lines + air-gap element)
                         |-- health.py      pure physics invariants / sanity rules (unit tested)
                         |-- femfile.py     parse .fem/.fee/.feh/.fec text files to JSON summaries
                         |-- plotting.py / reporting.py  post-processing (pure, optional matplotlib)
@@ -122,6 +124,8 @@ set only by `femm_health_check`; solves return `checked: false` + `next`; `femm_
 `femm_compare_results` return `doubts`. Keep that when adding a tool that loads a solution.
 Pole counts are `poles` (= 2p, preferred) with `pole_pairs` as alias, exactly one
 (`estimate.resolve_pole_pairs`).
+On a 1/N sector, rows and summary stay as drawn and `Run.finish` adds `full_machine`
+(`preflight.full_machine`, measured rule: flux-type quantities x N, air-gap element torque x 1).
 
 ### Adding a tool
 

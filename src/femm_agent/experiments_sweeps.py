@@ -46,6 +46,8 @@ def inductance(link, circuits: Sequence[str] | None = None, current: float = 1.0
     if dq:
         estimate.pole_pairs_of(dq, "dq")
         run.require_circuits(list(dq.get("circuits", ["A", "B", "C"])), "dq.circuits")
+    run.warn_sector()
+    run.torque_from_gap = bool(gap_boundary and not torque_groups)
     rows: list[list] = []
     summary: dict[str, Any] = {}
     plots: list = []
@@ -83,12 +85,17 @@ def inductance(link, circuits: Sequence[str] | None = None, current: float = 1.0
             psi_pm = res["zero"]["psi_d"]
             ld = (res["d"]["psi_d"] - psi_pm) / i_d if i_d else None
             lq = (res["q"]["psi_q"] - res["zero"]["psi_q"]) / i_q if i_q else None
-            t_dq = estimate.dq_torque(p, res["q"]["psi_d"], res["q"]["psi_q"], 0.0, i_q)
+            kf = run.flux_scale                     # dq torque from full-machine flux linkage
+            t_dq = estimate.dq_torque(p, kf * res["q"]["psi_d"], kf * res["q"]["psi_q"], 0.0, i_q)
             summary = {"psi_pm_Wb": psi_pm, "Ld_H": ld, "Lq_H": lq, "saliency_Lq_over_Ld": (lq / ld) if ld and lq else None,
                        "torque_dq_at_iq_Nm": t_dq, "torque_fem_at_iq_Nm": res["q"].get("torque"),
-                       "torque_dq_at_id_iq_Nm": estimate.dq_torque(p, res["dq"]["psi_d"], res["dq"]["psi_q"], i_d, i_q),
+                       "torque_dq_at_id_iq_Nm": estimate.dq_torque(p, kf * res["dq"]["psi_d"], kf * res["dq"]["psi_q"],
+                                                                   i_d, i_q),
                        "torque_fem_at_id_iq_Nm": res["dq"].get("torque"), "cases": res}
-            if res["q"].get("torque") is not None:
+            if res["q"].get("torque") is not None and run.sector_n and not run.torque_from_gap:
+                run.checks.append(health.not_applicable("torque_fem_vs_dq", "WST torque of a sector: full-machine "
+                                                        "scale not measured (pass gap_boundary instead)"))
+            elif res["q"].get("torque") is not None:
                 chk = health.force_consistency(res["q"]["torque"], t_dq, "FEM torque", "3/2 p psi_d i_q", 0.15,
                                                name="torque_fem_vs_dq")
                 chk["message"] += (" (single rotor position: EMF harmonics x current make the instantaneous torque"
@@ -221,6 +228,7 @@ def ac_sweep(link, frequencies: Sequence[float], circuits: Sequence[str] | None 
     minang = float(hdr.get("MinAngle", 30))
     acs = int(hdr.get("ACSolver", 0) or 0)
     f0 = float(hdr.get("Frequency", 0) or 0)
+    run.warn_sector()
     run.require_circuits(circuits)
     circuits = list(circuits) if circuits is not None else run.default_circuits()
     if not circuits:

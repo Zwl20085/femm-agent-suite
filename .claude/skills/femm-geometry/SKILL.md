@@ -97,10 +97,15 @@ before importing (how FEMM scales DXF units is unverified: check `bounding_box`)
   flux-normal line needs no boundary (the natural condition; standard FE practice, not checked
   live here). The same idea holds for the
   potentials of the other physics.
-- Machines: model one or more pole pairs with `periodic` boundaries on the two sector edges (even
+- Machines: model one or more poles with `periodic` boundaries on the two sector edges (even
   number of poles in the sector) or `antiperiodic` (odd). Use one boundary property per pair of
-  edges and assign it to both. This project did not exercise periodic sector models live: compare
-  one sector against the full model once before relying on it.
+  edges (one per region the cut line crosses: rotor iron, magnet, rotor air, stator air, stator
+  iron) and assign it to both. Use an air-gap element (`periodic air gap` / `antiperiodic air gap`,
+  BdryFormat 6 / 7) spanning the sector in the gap and leave its annulus unmeshed: rotating the
+  rotor of a sector (rotate-and-remesh) turns its cut lines off the stator's and breaks the pairs.
+  `femm_build_benchmark("spm", params={"sector": 2})` (or 4) is a worked example. Verified on FEMM 5
+  build 20261101 against the full machine within 0.12 %: flux linkage, EMF, inductance and
+  coenergy of a 1/N sector are x N, the air-gap element torque is already full-machine.
 - Axisymmetric models are a symmetry in themselves; do not put a boundary on the axis.
 
 ## Mesh size control
