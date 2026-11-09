@@ -82,3 +82,23 @@ def test_sector_resistance_and_copper_loss_times_n(femm_install, tmp_path, freq)
     for n in (2, 4):
         r, p = _r_and_loss(femm_install, tmp_path, n, freq)
         assert n * r == pytest.approx(r_full, rel=TOL) and n * p == pytest.approx(p_full, rel=TOL)
+
+
+def test_rotate_on_a_sector_is_refused_and_the_document_stays_intact(tools, tmp_path):
+    """0.2.1 review: method='rotate' on a sector is refused before any geometry moves; the session
+    document is not rewritten and the next experiment (air-gap element route) runs on it."""
+    path = tmp_path / "s4.fem"
+    tools.ok("femm_build_benchmark", kind="spm", path=str(path), params={"sector": 4})
+    before = path.read_bytes()
+    r = tools("femm_experiment_cogging", rotate_groups=[1], slots=12, poles=4, steps=5, method="rotate")
+    assert r["ok"] is False and "gap_boundary='AGE'" in r["error"]["hint"], r
+    assert path.read_bytes() == before
+    cog = tools.ok("femm_experiment_cogging", rotate_groups=[1], slots=12, poles=4, steps=13, method="age",
+                   gap_boundary="AGE")
+    assert cog["health_summary"]["failed"] == 0, cog["health_summary"]
+    assert cog["full_machine"]["factor"] == 4
+    fresh = tmp_path / "fresh.fem"                       # same experiment on a model that saw no refusal
+    tools.ok("femm_build_benchmark", kind="spm", path=str(fresh), params={"sector": 4})
+    ref = tools.ok("femm_experiment_cogging", rotate_groups=[1], slots=12, poles=4, steps=13, method="age",
+                   gap_boundary="AGE")
+    assert [x for r in cog["rows"] for x in r] == pytest.approx([x for r in ref["rows"] for x in r], rel=1e-9)

@@ -490,8 +490,13 @@ antiperiodic (1 pole per sector) boundary per region crossed by each radial cut 
 use `method="age"`.
 
 - **Rotate-and-remesh does not work on a sector.** Rotating the rotor turns its radial cut lines
-  away from the stator's, so the periodic pairs stop matching; the builder refuses
-  `rotor_method="rotate"` with a sector and the experiments warn. The air-gap element route works.
+  away from the stator's, so the periodic pairs stop matching. Measured (1/2 and 1/4 sectors,
+  rotor group 1 rotated about the origin in 2.5 deg steps): the solves at 2.5 / 5 / 7.5 deg still
+  run (gap torque within 1.1 % of the full machine on the AGE route), at 10 deg the solver stops
+  with `a region has no material assigned` (exit code 10); a single 15 deg step fails the same
+  way. The document stays usable (save and re-solve work). The builder refuses `rotor_method="rotate"` with a sector and, since the 0.2.1 review,
+  the experiments refuse `method="rotate"` on any detected sector before moving geometry (hint:
+  `method="age"`, `gap_boundary`). The air-gap element route works.
 - **Scale rule, measured** (full machine, AGE route, vs N = 2 periodic and N = 4 antiperiodic
   sectors; same experiment settings; elements 10592 / 5270 / 2636):
 
@@ -526,8 +531,13 @@ use `method="age"`.
   keys), notes}; derived torques are put on the full-machine footing of the gap torque (virtual
   work from N x coenergy, dq torque from N x psi), so the torque checks compare like with like
   (before 0.2.1 `mean_torque_vs_dq` failed on sectors by the factor N). A sector torque from the
-  weighted stress tensor (rotate route on a user's own sector) has no measured scale: it is left
-  out of `full_machine` and the dq torque check is not applicable.
+  weighted stress tensor (`inductance` with `torque_groups` on a sector) has no measured scale: it
+  is left out of `full_machine` and the dq torque check is not applicable. `full_machine.columns`
+  and `notes` name the footing of every row column and summary key (already full-machine, as
+  drawn, same for both). On a sector whose angle does not divide 360 no factor exists: no
+  `full_machine`, and the checks that would compare torque or an analytic estimate with flux
+  linkage / coenergy (`mean_torque_vs_dq`, `torque_vs_virtual_work`, `torque_fem_vs_dq`,
+  `psi_pm_vs_analytic`) are not applicable.
 
 ## Open questions (unverified)
 

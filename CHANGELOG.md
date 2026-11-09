@@ -29,6 +29,37 @@ Closes the last open item of 0.2.0 (sector models), measured on FEMM 5.0 build 2
 - Tests: `tests/test_sector.py` (fixture geometry from FEMM-written sector files, scale logic,
   builder commands, refusal path), `tests/live/test_live_sector.py` (sector x N vs full machine).
 
+Review fixes (same release):
+- `build_spm(sector=...)` validates its argument: None or 1 is the full machine, a whole number
+  N >= 2 valid for the machine builds 1/N; anything else (2.5, 1.9, 0, -4, True, "2") raises
+  `SectorError` listing the valid values (`benchmarks_sector.valid_sectors` / `resolve_sector`).
+  Before, 2.5 built 1/2 and 1.9, 0, -4, True built the full machine without notice.
+- The `build_spm` docstring said full-machine torque is N x the sector value; it now states the
+  measured rule (air-gap element torque x 1).
+- Experiments refuse `method="rotate"` on any detected sector before any geometry moves, with a
+  hint naming `method="age"` and the model's air-gap boundary (it used to warn only). Measured: the
+  rotated sector solves up to 7.5 deg, then fails with `a region has no material assigned` (exit
+  code 10), part-way through a sweep. Live test: refusal, document bytes unchanged, the AGE run
+  afterwards equals a run on a fresh model.
+- `full_machine` gains `columns` {full_machine, as_drawn, same} and per-column `notes` (also the
+  summary keys already full-machine, e.g. `torque_dq_*` beside as-drawn WST `torque_fem_*`), so a
+  driven torque table no longer mixes footings silently (`preflight.footing`).
+- A sector angle that does not divide 360: `mean_torque_vs_dq`, `torque_vs_virtual_work` (air-gap
+  element torque), `torque_fem_vs_dq` and `psi_pm_vs_analytic` return not applicable with the
+  reason instead of failing on mixed footings (`Run.scale_unknown`, `Run.sector_mismatch`).
+- A failure while pointing FEMM back after a pre-flight refusal is no longer swallowed: it is in
+  the error hint (with `femm_open(path=...)`) and `session.notes["point_back_error"]`, and when
+  `mi_close` went through the session is marked as having no document open. The docstring states
+  that a document FEMM did not write may be re-saved unedited.
+- `inductance` / `ac_sweep` (and their tools) take `center` for sector detection, like the
+  rotating experiments; `parameters.center` is reported.
+- Stale text: `data/commands.json` `*_getprobleminfo` descriptions no longer say "unverified"; the
+  back-EMF tool docstring states the 0.05 % bound of `SCALE_RULE`; docs/femm5-facts.md and the
+  experiments / health-check skills describe the refusal, column footing and non-dividing sectors.
+- Tests: `tests/test_sector_review.py`, including an offline check that the sector builder's
+  boundaries, circuits, segment boundary counts, block labels, `<No Mesh>` holes and sector angle
+  match the FEMM-written fixtures `tests/fixtures/spm_age_sector{2,4}.fem`.
+
 ## 0.2.0 (2026-11-08)
 
 Theme: an agent must not get a wrong or unchecked number out of the server silently. Every

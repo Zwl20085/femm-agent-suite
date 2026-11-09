@@ -223,18 +223,23 @@ def build_spm(link, path: str, *, slots: int = 12, poles: int | None = None, pol
 
     ``sector=N`` draws 1/N of the same machine (see :mod:`femm_agent.benchmarks_sector`): periodic
     or antiperiodic cut lines and an (anti)periodic air-gap element, so only
-    ``rotor_method='age'`` (the default for sectors) is possible. Full-machine flux linkage, EMF,
-    torque and inductance are N x the sector values (``scale_to_full_machine``)."""
+    ``rotor_method='age'`` (the default for sectors) is possible. ``sector`` None or 1 is the full
+    machine; any other value must be a whole number N >= 2 that divides the slots, poles and winding
+    (anything else raises SectorError listing the valid values). Scale rule (measured,
+    ``preflight.SCALE_RULE``): full-machine flux linkage, EMF, coenergy, resistance and copper loss
+    are N x the sector values (within 0.05 %), inductance N x (within 0.12 %); the air-gap element
+    torque of the sector already is the full-machine torque (x 1, within 0.05 %)."""
     p = 2 if poles is None and pole_pairs is None else estimate.resolve_pole_pairs(poles, pole_pairs, "build_spm")
     Rm = rotor_r + magnet_t          # magnet outer radius
     Rs = Rm + gap                   # stator bore
-    if sector and int(sector) > 1:
-        from . import benchmarks_sector as bs
+    from . import benchmarks_sector as bs
+    sector = bs.resolve_sector(sector, slots, 2 * p, spm_slot_phases(slots, p, 180.0 / slots))
+    if sector:
         if rotor_method not in (None, "age"):
             raise bs.SectorError(f"rotor_method={rotor_method!r} cannot run on a sector",
                                  "Use rotor_method='age' (the default for sectors): rotate-and-remesh turns the rotor's "
                                  "cut lines off the stator's, so the periodic pairs no longer match.")
-        info = bs.build_spm_sector(link, path, sector=int(sector), slots=slots, p=p, rotor_r=rotor_r,
+        info = bs.build_spm_sector(link, path, sector=sector, slots=slots, p=p, rotor_r=rotor_r,
                                    magnet_t=magnet_t, gap=gap, stator_or=stator_or, slot_open=slot_open, tip_h=tip_h,
                                    slot_w=slot_w, slot_depth=slot_depth, depth=depth, turns_per_slot=turns_per_slot,
                                    steel=steel, magnet=magnet, mesh_gap=mesh_gap, mesh_magnet=mesh_magnet,

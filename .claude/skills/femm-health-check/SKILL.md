@@ -73,6 +73,8 @@ Sector models: the experiment checks compare like with like (air-gap element tor
 already full-machine, against virtual work from N x coenergy and dq torque from N x psi; both
 scale factors measured, see femm_facts "Sector models"); with
 weighted-stress-tensor torque on a sector the dq check is not applicable (scale not measured).
+On a sector whose angle does not divide 360 (no factor N) the torque-vs-flux and analytic-psi
+checks are not applicable either.
 
 Known weak spot: when `rotor_groups` and `stator_groups` are complementary, the WST weights of the
 two selections are 1 - w of each other, so the torque balance is close to automatic. Virtual work

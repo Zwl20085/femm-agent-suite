@@ -20,7 +20,10 @@ summary, notes}: rows and summary are as drawn; flux linkage, EMF, Ke, coenergy,
 resistance and copper loss are x N for the full machine (measured within 0.05 %), inductance x N
 (within 0.12 %); iron losses x N expected but unmeasured; the air-gap element torque
 (`method="age"`) is already full-machine (within 0.05 %), and the derived torques in the rows (virtual work, dq) are put on that footing.
-Report the `full_machine` values for a machine, the as-drawn ones only for the sector itself. A requested group with no objects or a circuit that is not in the model is
+`full_machine.columns` / `notes` say for every row column and summary key whether it is already
+full-machine, as drawn or the same for both. `method="rotate"` is refused on a sector (use
+`method="age"` with `gap_boundary`); `inductance` and `ac_sweep` take `center` like the rotating
+experiments. Report the `full_machine` values for a machine, the as-drawn ones only for the sector itself. A requested group with no objects or a circuit that is not in the model is
 refused before the first solve, with the groups / circuits present in the message. More than 120 rows
 are thinned in the reply (the CSV has all). The JSON paths feed `femm_report` and
 `femm_compare_results`.

@@ -57,6 +57,47 @@ def sector_kind(slots: int, poles: int, sector: int, phases: list[tuple[str, int
     return "periodic" if sign > 0 else "antiperiodic"
 
 
+def valid_sectors(slots: int, poles: int, phases: list[tuple[str, int]]) -> list[int]:
+    """Every N >= 2 for which 1/N of the machine is a valid sector (see sector_kind)."""
+    out = []
+    for n in range(2, math.gcd(int(slots), int(poles)) + 1):
+        try:
+            sector_kind(slots, poles, n, phases)
+        except SectorError:
+            continue
+        out.append(n)
+    return out
+
+
+def resolve_sector(sector: Any, slots: int, poles: int, phases: list[tuple[str, int]]) -> int | None:
+    """Validate a `sector` argument: None or 1 -> None (full machine); a whole number N >= 2 that is
+    a valid sector of this machine -> N. Anything else (non-integer, bool, string, < 1, a divisor
+    the winding does not repeat over) raises SectorError with the valid values in the hint; nothing
+    is truncated or silently ignored."""
+    if sector is None:
+        return None
+    valid = valid_sectors(slots, poles, phases)
+    hint = (f"Pass sector=None or 1 for the full machine, or one of {valid} for 1/N of it "
+            f"({slots} slots, {poles} poles)." if valid else
+            f"Pass sector=None or 1: this machine ({slots} slots, {poles} poles) has no valid sector.")
+    whole = (isinstance(sector, int) and not isinstance(sector, bool)) or \
+        (isinstance(sector, float) and math.isfinite(sector) and sector.is_integer())
+    if not whole:
+        raise SectorError(f"sector must be a whole number (1 = full machine, N >= 2 = 1/N of it), got {sector!r}",
+                          hint)
+    n = int(sector)
+    if n == 1:
+        return None
+    if n < 1:
+        raise SectorError(f"sector must be >= 1 (1 = full machine, N >= 2 = 1/N of it), got {sector!r}", hint)
+    if n not in valid:
+        try:
+            sector_kind(slots, poles, n, phases)
+        except SectorError as e:
+            raise SectorError(str(e), hint) from None
+    return n
+
+
 def _pol(r: float, deg: float) -> tuple[float, float]:
     t = math.radians(deg)
     return r * math.cos(t), r * math.sin(t)

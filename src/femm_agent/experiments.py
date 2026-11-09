@@ -111,8 +111,10 @@ def _age_names(run: Run) -> list:
 def _preflight_rotation(run: Run, rotate_groups: Sequence[int], method: str, torque_groups: Sequence[int] | None,
                         circuits: Sequence[str] | None, center: Sequence[float], drive: dict | None = None,
                         slots: int | None = None, poles: int | None = None) -> None:
-    """Groups / circuits exist and the drive dict is complete, before the first solve."""
+    """Groups / circuits exist and the drive dict is complete, before the first solve; method='rotate'
+    on a rotational sector is refused here, before any geometry moves (the solve fails part-way)."""
     if method == "rotate":
+        run.refuse_rotate_on_sector(center)
         run.require_groups(rotate_groups, "rotate_groups")
         run.require_groups(torque_groups or rotate_groups, "torque_groups" if torque_groups else "rotate_groups (torque)",
                            need_labels=True)
@@ -251,8 +253,11 @@ def torque_vs_angle(link, rotate_groups: Sequence[int] = (1,), *, angles: Sequen
     if drive:
         cols += [f"i_{c}_A" for c in circuits]
     if not drive and len(angs) >= 3:
-        run.checks.append(health.curve_consistency(tq, vw, "torque", "virtual work dW'/dtheta", tolerance,
-                                                   name="torque_vs_virtual_work"))
+        if run.scale_unknown and run.torque_from_gap:
+            run.checks.append(health.not_applicable("torque_vs_virtual_work", run.scale_unknown))
+        else:
+            run.checks.append(health.curve_consistency(tq, vw, "torque", "virtual work dW'/dtheta", tolerance,
+                                                       name="torque_vs_virtual_work"))
     gaps = [r.get("torque_gap") for r in recs]
     if method == "rotate" and all(g is not None for g in gaps):
         run.checks.append(health.curve_consistency(tq, gaps, "WST", "air-gap element", tolerance, name="torque_wst_vs_gap"))
@@ -268,9 +273,8 @@ def torque_vs_angle(link, rotate_groups: Sequence[int] = (1,), *, angles: Sequen
             t_dq.append(estimate.dq_torque(p, pd, pq, float(drive.get("id", 0.0)), float(drive.get("iq", 0.0))))
         pts = tq[:-1] if len(tq) > 2 else tq
         dts = t_dq[:-1] if len(t_dq) > 2 else t_dq
-        if run.sector_n and not run.torque_from_gap:
-            run.checks.append(health.not_applicable("mean_torque_vs_dq", "WST torque of a sector: full-machine scale "
-                                                    "not measured (use method='age')"))
+        if run.sector_mismatch():
+            run.checks.append(health.not_applicable("mean_torque_vs_dq", run.sector_mismatch()))
         else:
             run.checks.append(health.force_consistency(sum(pts) / len(pts), sum(dts) / len(dts), "mean FEM torque",
                                                        "mean 3/2 p (psi_d i_q - psi_q i_d)", 0.08,
@@ -416,7 +420,9 @@ def back_emf(link, rotate_groups: Sequence[int] = (1,), *, poles: int | None = N
         anti = float(np.max(np.abs(p0[: steps // 2] + p0[steps // 2:]))) / (float(np.max(np.abs(p0))) or 1.0)
         run.checks.append({"name": "half_wave_antisymmetry", "ok": anti < 0.05, "value": anti, "expected": 0.0,
                            "tolerance": 0.05, "message": f"psi(theta + T/2) + psi(theta) peaks at {anti:.2%} of peak psi"})
-    if psi_estimate:
+    if psi_estimate and run.scale_unknown:
+        run.checks.append(health.not_applicable("psi_pm_vs_analytic", run.scale_unknown))
+    elif psi_estimate:
         run.checks.append(health.compare_to_estimate("psi_pm_vs_analytic", psi1[circuits[0]] * run.flux_scale,
                                                      psi_estimate, 0.2,
                                                      "flat-gap SPM estimate; leakage and slotting lower the FEM value"))

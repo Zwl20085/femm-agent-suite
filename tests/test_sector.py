@@ -109,8 +109,8 @@ def test_experiments_on_a_sector_report_full_machine(tmp_path):
                        out_dir=tmp_path)
     assert "full_machine" not in plain
     assert c["rows"][2][vw_col] == pytest.approx(4 * plain["rows"][2][vw_col])          # coenergy x N on a sector
-    w = ex.cogging(FakeFemm("spm_age_sector4.fem"), [1], slots=12, poles=4, steps=3, out_dir=tmp_path)["warnings"]
-    assert any("rotate-and-remesh on a sector" in x for x in w)
+    with pytest.raises(preflight.PreflightError, match="rotate-and-remesh"):    # refused since the 0.2.1 review
+        ex.cogging(FakeFemm("spm_age_sector4.fem"), [1], slots=12, poles=4, steps=3, out_dir=tmp_path)
 
 
 # ============================================================================= pre-flight refusal: no re-save

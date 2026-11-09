@@ -16,7 +16,8 @@ from .experiments_core import (BI_ENERGY, BI_LOSS_HYST, BI_LOSS_RES, BI_LOSS_TOT
 
 def inductance(link, circuits: Sequence[str] | None = None, current: float = 1.0, *, dq: dict | None = None,
                currents: Sequence[float] | None = None,
-               torque_groups: Sequence[int] | None = None, gap_boundary: str | None = None, out_dir=None,
+               torque_groups: Sequence[int] | None = None, gap_boundary: str | None = None,
+               center: Sequence[float] = (0.0, 0.0), out_dir=None,
                restore_path=None, solve_timeout: float | None = 600.0, tag: str | None = None) -> dict:
     """Inductance matrix by flux-linkage differences: L_jk = (psi_j(I_k = current) - psi_j(0)) / current
     (subtracting the zero-current solve removes PM flux; for saturating iron this is the secant
@@ -31,7 +32,10 @@ def inductance(link, circuits: Sequence[str] | None = None, current: float = 1.0
     ``currents = [I1, I2, ...]`` (A) gives L(I) instead: for each circuit (default all) and each
     current, only that circuit carries the current; rows are (circuit, current, psi, L_secant =
     (psi(I) - psi(0)) / I, L_incremental = dpsi/dI by finite differences over 0 and the sorted
-    currents). Self inductance only; use the default mode for mutuals."""
+    currents). Self inductance only; use the default mode for mutuals.
+
+    ``center`` (problem units, default (0, 0)) is the rotation centre used to detect a rotational
+    sector (as in the rotating experiments); on a 1/N sector ``full_machine`` is added."""
     run = Run(link, "inductance", out_dir, restore_path, solve_timeout, tag)
     ops = run.ops
     allc = run.circuit_names()
@@ -46,7 +50,7 @@ def inductance(link, circuits: Sequence[str] | None = None, current: float = 1.0
     if dq:
         estimate.pole_pairs_of(dq, "dq")
         run.require_circuits(list(dq.get("circuits", ["A", "B", "C"])), "dq.circuits")
-    run.warn_sector()
+    run.warn_sector(center)
     run.torque_from_gap = bool(gap_boundary and not torque_groups)
     rows: list[list] = []
     summary: dict[str, Any] = {}
@@ -92,9 +96,8 @@ def inductance(link, circuits: Sequence[str] | None = None, current: float = 1.0
                        "torque_dq_at_id_iq_Nm": estimate.dq_torque(p, kf * res["dq"]["psi_d"], kf * res["dq"]["psi_q"],
                                                                    i_d, i_q),
                        "torque_fem_at_id_iq_Nm": res["dq"].get("torque"), "cases": res}
-            if res["q"].get("torque") is not None and run.sector_n and not run.torque_from_gap:
-                run.checks.append(health.not_applicable("torque_fem_vs_dq", "WST torque of a sector: full-machine "
-                                                        "scale not measured (pass gap_boundary instead)"))
+            if res["q"].get("torque") is not None and run.sector_mismatch():
+                run.checks.append(health.not_applicable("torque_fem_vs_dq", run.sector_mismatch()))
             elif res["q"].get("torque") is not None:
                 chk = health.force_consistency(res["q"]["torque"], t_dq, "FEM torque", "3/2 p psi_d i_q", 0.15,
                                                name="torque_fem_vs_dq")
@@ -163,7 +166,8 @@ def inductance(link, circuits: Sequence[str] | None = None, current: float = 1.0
         _restore_currents(run)
     return run.finish({"circuits": circuits if not dq else dq.get("circuits"), "current": current, "dq": dq,
                        "currents": list(currents) if currents is not None else None,
-                       "torque_groups": torque_groups, "gap_boundary": gap_boundary}, cols, rows, summary, plots)
+                       "torque_groups": torque_groups, "gap_boundary": gap_boundary, "center": list(center)},
+                      cols, rows, summary, plots)
 
 
 def _check_currents(currents: Sequence[float]) -> list[float]:
@@ -211,13 +215,15 @@ def l_of_i_warnings(rows: Sequence[dict], circuit: str = "") -> list[str]:
 # ============================================================================= AC sweep
 
 def ac_sweep(link, frequencies: Sequence[float], circuits: Sequence[str] | None = None, *, current: float | None = None,
-             estimate_fn: Callable[[float], complex] | None = None, out_dir=None, restore_path=None,
+             estimate_fn: Callable[[float], complex] | None = None, center: Sequence[float] = (0.0, 0.0),
+             out_dir=None, restore_path=None,
              solve_timeout: float | None = 600.0, tag: str | None = None) -> dict:
     """Time-harmonic sweep: for each frequency set ``mi_probdef(f, ...)`` (other probdef fields kept),
     solve, and read each circuit's phasors (FEMM phasors are peak amplitudes):
     Z = V/I, R = Re Z, L = Im Z / omega, plus block-integral losses over all blocks (6 total,
     4 resistive, 3 hysteresis/laminations). Health: 1/2 Re(sum V conj I) == total losses.
-    ``estimate_fn(f) -> complex Z`` adds an analytic comparison column. Frequency restored after."""
+    ``estimate_fn(f) -> complex Z`` adds an analytic comparison column. Frequency restored after.
+    ``center`` (default (0, 0)) is the rotation centre for sector detection (``full_machine``)."""
     run = Run(link, "ac_sweep", out_dir, restore_path, solve_timeout, tag)
     ops = run.ops
     hdr = run.model.header
@@ -228,7 +234,7 @@ def ac_sweep(link, frequencies: Sequence[float], circuits: Sequence[str] | None 
     minang = float(hdr.get("MinAngle", 30))
     acs = int(hdr.get("ACSolver", 0) or 0)
     f0 = float(hdr.get("Frequency", 0) or 0)
-    run.warn_sector()
+    run.warn_sector(center)
     run.require_circuits(circuits)
     circuits = list(circuits) if circuits is not None else run.default_circuits()
     if not circuits:
@@ -288,7 +294,8 @@ def ac_sweep(link, frequencies: Sequence[float], circuits: Sequence[str] | None 
                                                            ylabel="R (ohm)", dashed=("analytic",))),
              ("inductance", lambda p: plotting.plot_curves(p, fs, {"FEM": Lh[c0]}, title=f"Inductance vs frequency, {c0}",
                                                            xlabel="frequency (Hz)", ylabel="L (H)"))]
-    return run.finish({"frequencies": list(map(float, frequencies)), "circuits": circuits, "current": current},
+    return run.finish({"frequencies": list(map(float, frequencies)), "circuits": circuits, "current": current,
+                       "center": list(center)},
                       cols, rows, summary, plots)
 
 
