@@ -176,6 +176,7 @@ class Ops:
 # ============================================================================= experiment scaffolding
 
 class Run:
+    last: "Run | None" = None
     """Bookkeeping for one experiment: snapshot the model, time it, write outputs."""
 
     def __init__(self, link, name: str, out_dir: str | Path | None, restore_path: str | None = None,
@@ -183,6 +184,7 @@ class Run:
         self.name = name
         self.t0 = time.time()
         self.ops = Ops(link, solve_timeout)
+        Run.last = self          # lets the tool layer undo the working-copy switch if pre-flight refuses
         stamp = time.strftime("%Y%m%d-%H%M%S") + f"-{int((time.time() % 1) * 1000):03d}"
         base = Path(out_dir) if out_dir else Path.cwd() / "experiments"
         self.dir = base / f"{name}-{tag or stamp}"
@@ -199,6 +201,9 @@ class Run:
         self.checks: list[dict] = []
         self.warnings: list[str] = []
         self.left_solved: bool | None = None
+        self.sector_n: int | None = None        # 1/N rotational sector (set by warn_sector)
+        self.sector_angle: float | None = None  # sector angle in deg, also when it does not divide 360
+        self.torque_from_gap = False            # torque read with mo_gapintegral (full machine on a sector)
 
     # pre-flight (before the first solve)
     def require_groups(self, groups: Sequence[int] | None, what: str = "groups", need_labels: bool = False) -> None:
@@ -208,8 +213,42 @@ class Run:
         preflight.require_circuits(self.model, circuits, what)
 
     def warn_sector(self, center: Sequence[float] = (0.0, 0.0), slots: int | None = None,
-                    poles: int | None = None) -> None:
-        self.warnings.extend(preflight.sector_warnings(self.model, center, slots, poles))
+                    poles: int | None = None, method: str | None = None) -> None:
+        """Detect a rotational sector (sets `sector_n`) and add the warnings that go with it."""
+        self.sector_angle, self.sector_n = preflight.sector_factor(self.model, center)
+        self.warnings.extend(preflight.sector_warnings(self.model, center, slots, poles, method))
+
+    def refuse_rotate_on_sector(self, center: Sequence[float] = (0.0, 0.0)) -> None:
+        """Pre-flight: method='rotate' on any rotational sector is refused (preflight.refuse_rotate_on_sector)."""
+        preflight.refuse_rotate_on_sector(self.model, center)
+
+    def sector_mismatch(self) -> str | None:
+        """Why a check that compares a torque with flux linkage / coenergy (dq formula, virtual work,
+        analytic psi) cannot be put on one footing, or None when it can: a sector whose angle does
+        not divide 360 (full-machine factor unknown), or weighted-stress-tensor torque on a 1/N
+        sector (its full-machine scale is not measured)."""
+        if self.sector_angle is None:
+            return None
+        if self.sector_n is None:
+            return self.scale_unknown
+        if not self.torque_from_gap:
+            return "WST torque of a sector: full-machine scale not measured (use method='age' / gap_boundary)"
+        return None
+
+    @property
+    def scale_unknown(self) -> str | None:
+        """Reason text when the model is a sector whose angle does not divide 360 (no full-machine
+        factor for flux linkage / coenergy), else None."""
+        if self.sector_angle is None or self.sector_n:
+            return None
+        return (f"{self.sector_angle:.4g} deg sector does not divide 360: the full-machine factor of flux linkage "
+                "and coenergy is unknown, so they cannot be put on the footing of the air-gap element torque or a "
+                "full-machine estimate")
+
+    @property
+    def flux_scale(self) -> int:
+        """Factor from as-drawn flux linkage / coenergy to full machine (1 unless a 1/N sector)."""
+        return self.sector_n or 1
 
     # model facts
     @property
@@ -277,6 +316,9 @@ class Run:
             "timing": {"total_s": round(total, 3), "solves": self.ops.solves,
                        "per_solve_s": round(self.ops.solve_seconds / self.ops.solves, 4) if self.ops.solves else None},
         }
+        if self.sector_n:
+            out["full_machine"] = _jsonable(preflight.full_machine(self.name, out["summary"], self.sector_n,
+                                                                   self.torque_from_gap, columns))
         json_path = self.dir / f"{self.name}.json"
         out["files"]["json"] = str(json_path)
         json_path.write_text(json.dumps(out, indent=1, default=str), encoding="utf-8")

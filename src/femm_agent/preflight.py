@@ -147,22 +147,149 @@ def sector_extent_deg(model: Any, center: Sequence[float] = (0.0, 0.0)) -> float
     return span if 1.0 < span < 359.0 else None
 
 
-def sector_warnings(model: Any, center: Sequence[float] = (0.0, 0.0), slots: int | None = None,
-                    poles: int | None = None) -> list[str]:
-    """Warnings when the model is a sector but the experiment is described by full-machine counts:
-    the FEM torque / flux linkage are for the sector as drawn (scale by 360/extent unless the
-    circuits already hold the full-machine turns), and Q, 2p must be whole numbers per sector."""
+SCALE_RULE = ("sector model, N = 360 / sector angle. Measured on FEMM 5 build 20261101 (12-slot 4-pole SPM, "
+              "N = 2 and 4) against the full machine: flux linkage, EMF, Ke, coenergy, energy, circuit resistance "
+              "(DC and 50 Hz) and coil resistive loss of the series circuits x N within 0.05 %, inductance x N "
+              "within 0.12 %; air-gap element torque (mo_gapintegral) is already the full-machine torque (x 1, "
+              "within 0.05 %); flux density, currents and angles x 1. Iron (hysteresis / eddy) losses: x N "
+              "expected (integral over the drawn blocks), unmeasured")
+
+# summary keys per experiment that scale with N ("flux") or follow the torque source ("torque")
+_SCALED = {
+    "back_emf": {"flux": ("psi_fundamental_Wb", "emf_fundamental_peak_V", "emf_fundamental_rms_V", "ke_V_per_rad_s",
+                          "emf_line_line_peak_V", "emf_line_line_fundamental_V", "harmonics_phase1"), "torque": ()},
+    "cogging": {"flux": (), "torque": ("peak_to_peak_Nm", "rms_Nm", "harmonics")},
+    "torque_vs_angle": {"flux": (), "torque": ("mean_torque_Nm", "max_torque_Nm", "min_torque_Nm", "peak_to_peak_Nm")},
+    "inductance": {"flux": ("L_matrix_H", "self_H", "psi_pm_Wb", "Ld_H", "Lq_H", "L_secant_H", "L_incremental_H",
+                            "psi_at_zero_Wb"),
+                   "torque": ("torque_fem_at_iq_Nm", "torque_fem_at_id_iq_Nm"),
+                   "full": ("torque_dq_at_iq_Nm", "torque_dq_at_id_iq_Nm", "saliency_Lq_over_Ld")},
+    "ac_sweep": {"flux": ("R_ohm", "L_H"), "torque": ()},
+}
+
+
+def sector_factor(model: Any, center: Sequence[float] = (0.0, 0.0)) -> tuple[float | None, int | None]:
+    """(sector angle in deg, N) for a rotational sector whose angle divides 360; (angle, None) when it
+    does not divide 360; (None, None) for no sector."""
     ext = sector_extent_deg(model, center)
+    if ext is None:
+        return None, None
+    n = 360.0 / ext
+    return ext, (int(round(n)) if abs(n - round(n)) < 1e-3 and round(n) >= 2 else None)
+
+
+def _scale(v: Any, k: float) -> Any:
+    if isinstance(v, bool) or v is None:
+        return v
+    if isinstance(v, (int, float)):
+        return v * k
+    if isinstance(v, dict):
+        return {a: (_scale(b, k) if a not in ("order", "order_per_period", "order_per_rev") else b) for a, b in v.items()}
+    if isinstance(v, (list, tuple)):
+        return [_scale(x, k) for x in v]
+    return v
+
+
+_SAME_PREFIXES = ("angle", "i_", "id_", "iq_", "current", "frequenc", "position", "circuits", "rpm",
+                  "electrical_frequency", "period", "lcm", "method", "emf_thd", "saliency", "linear_no_pm")
+_SAME_NAMES = ("case", "circuit", "excited_circuit", "note", "direction", "position_units")
+
+
+def footing(name: str, torque_from_gap: bool, torque_keys: Sequence[str] = ()) -> str:
+    """Footing of a row column or summary key on a 1/N sector: 'full' (already full machine: air-gap
+    element torque, dq torque from N x psi, and - with air-gap element torque - every torque derived
+    on its footing, e.g. virtual work from N x coenergy), 'same' (angles, currents, frequencies,
+    ratios, labels: equal for sector and full machine) or 'drawn' (the sector as drawn: flux linkage,
+    EMF, coenergy, inductance, ..., and weighted-stress-tensor torque). `torque_keys` names keys
+    that are torques without saying so (cogging `rms_Nm`, `harmonics`)."""
+    n = name.lower()
+    if "torque_dq" in n or "torque_gap" in n:
+        return "full"
+    if "torque" in n or name in torque_keys:
+        return "full" if torque_from_gap else "drawn"
+    if n in _SAME_NAMES or n.startswith(_SAME_PREFIXES):
+        return "same"
+    return "drawn"
+
+
+def full_machine(experiment: str, summary: dict, n: int, torque_from_gap: bool,
+                 columns: Sequence[str] = ()) -> dict:
+    """Full-machine values of a sector experiment (pure): the `flux` keys of `summary` times N, the
+    `torque` keys times 1 when the torque comes from the air-gap element (already full machine),
+    omitted otherwise (weighted-stress-tensor torque of a sector: scale not measured); `full` keys
+    (dq torques computed from N x psi) as they are. `columns` (the row columns) are sorted into
+    `columns` = {full_machine, as_drawn, same} by :func:`footing`, and `notes` state it per column,
+    plus the summary keys that are already full-machine, so no table mixes footings silently."""
+    keys = _SCALED.get(experiment, {"flux": (), "torque": ()})
+    vals = {k: _scale(summary[k], n) for k in keys["flux"] if k in summary}
+    vals.update({k: summary[k] for k in keys.get("full", ()) if k in summary})   # computed full-machine already
+    cols: dict[str, list[str]] = {"full_machine": [], "as_drawn": [], "same": []}
+    for c in columns:
+        cols[{"full": "full_machine", "drawn": "as_drawn", "same": "same"}[footing(c, torque_from_gap)]].append(c)
+    note = []
+    if columns:
+        note.append(f"row columns already full-machine: {cols['full_machine'] or 'none'}; as drawn (1/{n} sector; full-machine "
+                    f"factor per quantity in rule): {cols['as_drawn'] or 'none'}; same for both: "
+                    f"{cols['same'] or 'none'}")
+    tk = keys["torque"]
+    full_keys = [k for k in summary if footing(k, torque_from_gap, tk) == "full"]
+    drawn_torque = [k for k in summary if ("torque" in k.lower() or k in tk)
+                    and footing(k, torque_from_gap, tk) == "drawn"]
+    note.append(f"summary keys already full-machine: {full_keys or 'none'}; every other summary key is as drawn"
+                + (f" (including the weighted-stress-tensor torques {drawn_torque})" if drawn_torque else ""))
+    if torque_from_gap:
+        vals.update({k: summary[k] for k in keys["torque"] if k in summary})
+    elif keys["torque"]:
+        note.append("torque from the weighted stress tensor of a sector: full-machine scale not measured, not given")
+    out = {"factor": int(n), "rule": SCALE_RULE, "summary": vals, "notes": note}
+    if columns:
+        out["columns"] = cols
+    return out
+
+
+def refuse_rotate_on_sector(model: Any, center: Sequence[float] = (0.0, 0.0)) -> None:
+    """Raise PreflightError when the model is a rotational sector (any angle): rotate-and-remesh turns
+    the rotor's periodic cut lines off the stator's. Measured on FEMM 5 build 20261101 (1/2 and 1/4
+    SPM benchmark, rotor group 1 rotated about the origin): up to 7.5 deg the solve still runs, at
+    10 deg and beyond the solver stops with "a region has no material assigned" (exit code 10), so a
+    sweep fails part-way; the review that prompted this also reported a solver crash (exit code
+    -1073741819), not reproduced here. Refused before any geometry moves."""
+    ext = sector_extent_deg(model, center)
+    if ext is None:
+        return
+    ages = [b.get("BdryName") for b in model.boundaries() if int(b.get("BdryType", 0) or 0) in (6, 7)]
+    use = (f"method='age', gap_boundary={ages[0]!r}" if len(ages) == 1 else
+           f"method='age' with gap_boundary=<one of {ages}>" if ages else
+           "method='age' after adding an (anti)periodic air-gap element in the gap (femm_add_boundary "
+           "bc_type='periodic_air_gap' or 'antiperiodic_air_gap' on two mid-gap arcs, '<No Mesh>' between them)")
+    raise PreflightError(
+        f"method='rotate' on a {ext:.4g} deg sector model: rotate-and-remesh turns the rotor's periodic cut lines "
+        "off the stator's and the solver fails part-way through the sweep (measured: 'a region has no material "
+        "assigned' from 10 deg on); refused before any geometry moved",
+        f"Use {use} (the air-gap element keeps the sector's cut lines matched).")
+
+
+def sector_warnings(model: Any, center: Sequence[float] = (0.0, 0.0), slots: int | None = None,
+                    poles: int | None = None, method: str | None = None) -> list[str]:
+    """Warnings for a sector model: what the as-drawn numbers mean (see SCALE_RULE; the experiments
+    add a `full_machine` block) and that Q, 2p must be whole numbers per sector (they are
+    full-machine counts). The rotate route is refused separately (refuse_rotate_on_sector);
+    `method` is kept for callers."""
+    ext, n = sector_factor(model, center)
     if ext is None:
         return []
     k = 360.0 / ext
-    out = [f"model is a {ext:.4g} deg sector (periodic/antiperiodic boundaries found): torque and flux linkage are "
-           f"for the sector as drawn; multiply by {k:.4g} for the full machine unless the circuit turns already "
-           "represent the full machine."]
-    for label, n in (("slots", slots), ("poles", poles)):
-        if n:
-            per = n / k
+    if n:
+        out = [f"model is a {ext:.4g} deg sector (1/{n} of the machine): rows and summary are as drawn; flux linkage, "
+               f"EMF, inductance, coenergy, resistance and copper loss are x {n} for the full machine (measured), "
+               "iron losses x N expected but unmeasured, air-gap element torque is "
+               "already full-machine; `full_machine` holds the scaled values."]
+    else:
+        out = [f"model is a {ext:.4g} deg sector, which does not divide 360: no full-machine values are given."]
+    for label, cnt in (("slots", slots), ("poles", poles)):
+        if cnt:
+            per = cnt / k
             if abs(per - round(per)) > 1e-6 or round(per) == 0:
-                out.append(f"{label}={n} gives {per:.3g} per {ext:.4g} deg sector (not a whole number): pass the "
+                out.append(f"{label}={cnt} gives {per:.3g} per {ext:.4g} deg sector (not a whole number): pass the "
                            f"full-machine {label} count, or check the sector angle.")
     return out

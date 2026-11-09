@@ -188,3 +188,17 @@ def test_l_of_i_live_increments_positive(tools):
     r = tools.ok("femm_experiment_inductance", currents=[20, 1, 5, 2], session="lofi2")
     assert [row[1] for row in r["rows"]] == [1, 2, 5, 20]
     assert all(row[4] > 0 for row in r["rows"]), r["rows"]
+
+
+def test_preflight_refusal_does_not_rewrite_the_document(tools):
+    import os
+
+    tools.ok("femm_build_benchmark", kind="ccore", session="refuse")
+    tools.ok("femm_solve", session="refuse")
+    doc = tools.ok("femm_session_list")
+    path = next(x["document"] for x in doc if x["name"] == "refuse")
+    m0 = os.stat(path).st_mtime_ns
+    bad = tools("femm_experiment_force_vs_position", groups=[7], dy=0.25, steps=3, session="refuse")
+    assert not bad["ok"] and os.stat(path).st_mtime_ns == m0
+    r = tools.ok("femm_load_solution", session="refuse")      # FEMM points at the session document again
+    assert r["elements"] > 1000

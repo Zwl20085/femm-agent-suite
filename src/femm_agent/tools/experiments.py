@@ -2,10 +2,12 @@
 health checks and timings), plus benchmark-model builders for validation."""
 from __future__ import annotations
 
+import filecmp
+import time
 from pathlib import Path
 from typing import Any, Callable
 
-from .. import benchmarks, experiments
+from .. import benchmarks, experiments, experiments_core
 from ..sessions import Session
 from ._common import ToolContext, ToolInputError, run_tool
 
@@ -28,16 +30,18 @@ def _run(s: Session, fn: Callable[..., dict], **kw: Any) -> dict:
     (an experiment's health_summary covers its own rules, not femm_health_check)."""
     _need_magnetics(s)
     was_checked = s.checked
+    started = time.time()
     s.checked = False            # from here on FEMM solves other geometries / currents
     try:
         res = fn(s.link, out_dir=s.work_dir / "experiments", restore_path=s.document, **kw)
     except Exception as e:
         if getattr(e, "tool_input", False):
             s.checked = was_checked  # refused before any solve: the loaded solution is untouched
-            if s.document:           # Run saved a copy first; point FEMM back at the session document
+            problem = _point_back(s, started)
+            if problem:
                 try:
-                    s.link.call("mi_saveas", str(s.document).replace("\\", "/"))
-                except Exception:
+                    e.hint = f"{getattr(e, 'hint', None) or ''} Also: {problem}".strip()
+                except AttributeError:
                     pass
         else:
             s.solved = False         # failed mid-sweep: what is loaded (if anything) is not the saved model
@@ -50,6 +54,54 @@ def _run(s: Session, fn: Callable[..., dict], **kw: Any) -> dict:
     if not s.solved:
         out = {**out, "next": f"femm_solve(session={s.name!r})  # the final re-solve failed; nothing is loaded"}
     return out
+
+
+def _point_back(s: Session, started: float) -> str | None:
+    """After a pre-flight refusal: the experiment had saved FEMM's document as a working copy, so
+    FEMM's current file is that copy. Point it back at the session document without rewriting it
+    when the document on disk equals the copy byte for byte (close, re-open, reload the solution if
+    one was loaded); only when they differ (unsaved edits) save the edits to the session document,
+    which is what the next femm_solve would do anyway. Caveat of the byte compare: a session
+    document FEMM did not write itself (hand-written, or saved by another FEMM build) never equals
+    FEMM's re-save, so it may be re-saved unedited - same model, FEMM's formatting.
+
+    Returns None on success, or a message when pointing back failed: the failure is recorded in
+    ``s.notes['point_back_error']``, and when FEMM may have no document open any more (``mi_close``
+    went through) the session is marked so (``physics`` None, ``solved`` False; ``document`` kept)
+    and the message says to femm_open it again."""
+    run = experiments_core.Run.last
+    if (not s.document or run is None or run.t0 < started or run.ops.link is not s.link
+            or run.restore_path != s.document):
+        return None                  # refused before this experiment saved a working copy
+    doc = str(s.document).replace("\\", "/")
+    closed = False
+    try:
+        same = Path(doc).is_file() and filecmp.cmp(run.model_path, doc, shallow=False)
+    except OSError:
+        same = False
+    try:
+        if same:
+            s.link.call("mi_close")
+            closed = True
+            s.link.call("opendocument", doc)
+            if s.solved:
+                try:
+                    s.link.call("mi_loadsolution")
+                except Exception:
+                    s.solved = False
+        else:
+            s.link.call("mi_saveas", doc)
+    except Exception as e:
+        msg = f"pointing FEMM back at {doc} after the refusal failed ({type(e).__name__}: {e})"
+        if closed:
+            s.physics = None
+            s.solved = False
+            msg += f"; FEMM may have no document open: call femm_open(path={doc!r}) before continuing"
+        else:
+            msg += f"; FEMM's current file may be the working copy {run.model_path}: call femm_open(path={doc!r})"
+        s.notes["point_back_error"] = msg
+        return msg
+    return None
 
 
 def _compact(res: dict) -> dict:
@@ -135,7 +187,9 @@ def register(mcp: Any, ctx: ToolContext) -> None:
         Give exactly one of `poles` (number of magnet poles, 2p; preferred) or `pole_pairs` (p).
         Example: femm_experiment_back_emf(rotate_groups=[1, 10], poles=4, rpm=1500).
         `psi_estimate` (Wb, peak) adds an analytic comparison (femm_estimate spm_flux_linkage_fundamental).
-        On a sector model (periodic boundaries) `warnings` says the flux is for the sector as drawn.
+        On a 1/N sector model (periodic boundaries) rows and summary are as drawn and `full_machine`
+        gives the full-machine values (flux linkage and EMF x N, within 0.05 %, measured on build 20261101).
+        method='rotate' is refused on a sector (use method='age' with gap_boundary).
         (Renamed from femm_experiment_backemf in 0.2.0.)"""
         return run_tool(ctx, session, lambda s: _run(s, experiments.back_emf, rotate_groups=rotate_groups,
                                                      poles=poles, pole_pairs=pole_pairs, rpm=rpm, steps=steps,
@@ -148,7 +202,7 @@ def register(mcp: Any, ctx: ToolContext) -> None:
     def femm_experiment_inductance(circuits: list[str] | None = None, current: float = 1.0, dq: dict | None = None,
                                    currents: list[float] | None = None,
                                    torque_groups: list[int] | None = None, gap_boundary: str | None = None,
-                                   session: str = "main") -> dict:
+                                   center: list[float] | None = None, session: str = "main") -> dict:
         """Inductance from flux linkage. Default: self/mutual matrix L_jk = (psi_j(I_k=current) - psi_j(0)) / current
         for `circuits` (default all) - subtracting the zero-current solve removes magnet flux. Linear
         models get an energy check (W = 1/2 L I^2).
@@ -159,21 +213,26 @@ def register(mcp: Any, ctx: ToolContext) -> None:
         = 2p preferred, "pole_pairs" accepted)
         at the present rotor position (theta0 = electrical angle of the d-axis from phase A) gives
         psi_pm, Ld, Lq, saliency and the dq torque, checked against the FEM torque on `torque_groups`
-        (WST) or `gap_boundary` (air-gap element)."""
+        (WST) or `gap_boundary` (air-gap element). `center` (default [0, 0]) is the rotation centre used to
+        detect a 1/N sector model (then `full_machine` holds the full-machine values)."""
         return run_tool(ctx, session, lambda s: _run(s, experiments.inductance, circuits=circuits, current=current,
-                                                     dq=dq, currents=currents, torque_groups=torque_groups, gap_boundary=gap_boundary),
+                                                     dq=dq, currents=currents, torque_groups=torque_groups,
+                                                     gap_boundary=gap_boundary, center=tuple(center or (0.0, 0.0))),
                         need="document")
 
     @mcp.tool()
     def femm_experiment_ac_sweep(frequencies: list[float], circuits: list[str] | None = None,
-                                 current: float | None = None, session: str = "main") -> dict:
+                                 current: float | None = None, center: list[float] | None = None,
+                                 session: str = "main") -> dict:
         """Time-harmonic frequency sweep (Hz): per frequency, circuit phasors (peak amplitudes) ->
         Z = V/I, R(f), L(f) = Im Z / omega, and losses (total / resistive / hysteresis) over all blocks.
         Check: 1/2 Re(V conj I) equals total losses. Other probdef settings are kept and the original
         frequency restored. `current` overrides every swept circuit's current. Conductors must have
-        conductivity and the mesh must resolve the skin depth (femm_estimate skin_depth)."""
+        conductivity and the mesh must resolve the skin depth (femm_estimate skin_depth). `center` (default
+        [0, 0]) is the rotation centre used to detect a 1/N sector model (`full_machine`: R, L x N)."""
         return run_tool(ctx, session, lambda s: _run(s, experiments.ac_sweep, frequencies=frequencies,
-                                                     circuits=circuits, current=current), need="document")
+                                                     circuits=circuits, current=current,
+                                                     center=tuple(center or (0.0, 0.0))), need="document")
 
     @mcp.tool()
     def femm_experiment_parametric(cases: list[dict], outputs: list[dict], template: str | None = None,
@@ -208,7 +267,9 @@ def register(mcp: Any, ctx: ToolContext) -> None:
         """Build a validated benchmark model from scratch (new magnetics document, saved to `path`,
         default <work_dir>/<kind>.fem) and return its groups, circuits and analytic estimates:
         'ccore' (planar U-core + armature, groups armature=1 core=2 coil=3, circuit 'coil'),
-        'coilgun' (axisymmetric coil + iron slug group 1), 'spm' (12-slot 4-pole surface PM machine,
+        'coilgun' (axisymmetric coil + iron slug group 1), 'spm' (12-slot 4-pole surface PM machine;
+        params {"sector": N} draws 1/N of it with (anti)periodic cut lines and an air-gap element, AGE
+        route only, result `scale_to_full_machine` = N;
         params rotor_method='rotate'|'age', rotor groups [1,10] or AGE boundary 'AGE', circuits A/B/C),
         'round_wire' (copper wire in an A=0 circle for AC sweeps). `params` are the builder keyword
         arguments (e.g. {"gap": 0.5, "turns": 100}); see femm_agent.benchmarks."""

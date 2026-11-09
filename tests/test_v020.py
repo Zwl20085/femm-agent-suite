@@ -151,7 +151,7 @@ def test_sector_detection_and_warning(tmp_path):
     assert preflight.sector_extent_deg(_Model()) == pytest.approx(90)
     assert preflight.sector_extent_deg(_Model(ptype=0)) is None
     w = preflight.sector_warnings(_Model(), slots=12, poles=4)
-    assert len(w) == 1 and "90 deg sector" in w[0] and "multiply by 4" in w[0]
+    assert len(w) == 1 and "90 deg sector (1/4 of the machine)" in w[0] and "x 4 for the full machine" in w[0]
     w = preflight.sector_warnings(_Model(), slots=12, poles=6)        # 1.5 poles per sector
     assert any(x.startswith("poles=6 gives 1.5 per") for x in w)
     full_model = femfile.parse_file(FIX / "spm_age.fem")
@@ -397,7 +397,7 @@ def test_doctor_tool_and_cli(full, capsys, monkeypatch):
     monkeypatch.setattr(sys, "argv", ["femm_agent", "--version"])
     with pytest.raises(SystemExit) as e:
         main_mod.main()
-    assert e.value.code == 0 and "0.2.0" in capsys.readouterr().out
+    assert e.value.code == 0 and __import__("femm_agent").__version__ in capsys.readouterr().out
     monkeypatch.setattr(doctor, "run_checks", lambda: [doctor.Check("x", doctor.PASS, "ok")])
     monkeypatch.setattr(sys, "argv", ["femm_agent", "--doctor", "--json"])
     with pytest.raises(SystemExit) as e:

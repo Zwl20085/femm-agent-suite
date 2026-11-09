@@ -1,3 +1,3 @@
 """FEMM Agent Suite: MCP server, physics checks, experiments and skills for FEMM 5."""
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"

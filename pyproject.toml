@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "femm-agent-suite"
-version = "0.2.0"
+version = "0.2.1"
 description = "All-in-one FEMM 5 agent toolkit: MCP server, physics checks, experiments and Claude skills for 2D magnetic, electrostatic, thermal and current-flow FEA"
 readme = "README.md"
 license = { text = "MIT" }
