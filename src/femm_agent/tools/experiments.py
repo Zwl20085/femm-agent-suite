@@ -165,7 +165,7 @@ def register(mcp: Any, ctx: ToolContext) -> None:
         Example: femm_experiment_back_emf(rotate_groups=[1, 10], poles=4, rpm=1500).
         `psi_estimate` (Wb, peak) adds an analytic comparison (femm_estimate spm_flux_linkage_fundamental).
         On a 1/N sector model (periodic boundaries) rows and summary are as drawn and `full_machine`
-        gives the full-machine values (flux linkage and EMF x N; verified to 0.02 %).
+        gives the full-machine values (flux linkage and EMF x N; measured to 0.02 % on build 20261101).
         (Renamed from femm_experiment_backemf in 0.2.0.)"""
         return run_tool(ctx, session, lambda s: _run(s, experiments.back_emf, rotate_groups=rotate_groups,
                                                      poles=poles, pole_pairs=pole_pairs, rpm=rpm, steps=steps,

@@ -104,8 +104,9 @@ before importing (how FEMM scales DXF units is unverified: check `bounding_box`)
   BdryFormat 6 / 7) spanning the sector in the gap and leave its annulus unmeshed: rotating the
   rotor of a sector (rotate-and-remesh) turns its cut lines off the stator's and breaks the pairs.
   `femm_build_benchmark("spm", params={"sector": 2})` (or 4) is a worked example. Verified on FEMM 5
-  build 20261101 against the full machine within 0.12 %: flux linkage, EMF, inductance and
-  coenergy of a 1/N sector are x N, the air-gap element torque is already full-machine.
+  build 20261101 against the full machine: flux linkage, EMF, coenergy, resistance and copper loss
+  of a 1/N sector are x N (within 0.05 %), inductance x N (within 0.12 %), the air-gap element
+  torque is already full-machine (within 0.05 %); iron losses x N are expected but unmeasured.
 - Axisymmetric models are a symmetry in themselves; do not put a boundary on the axis.
 
 ## Mesh size control

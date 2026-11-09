@@ -8,9 +8,11 @@ Closes the last open item of 0.2.0 (sector models), measured on FEMM 5.0 build 2
   benchmark with one periodic / antiperiodic boundary per region on each cut line and an
   (anti)periodic air-gap element; refuses `rotor_method="rotate"` (rotate-and-remesh cannot keep
   the cut lines matched) and sectors that do not divide the slots, poles or winding.
-- Measured scale rule (full machine vs N = 2 and N = 4, 12-slot 4-pole SPM, all within 0.12 %):
-  flux linkage, EMF, inductance, coenergy and energy of a sector are x N; the air-gap element
-  torque (`mo_gapintegral`) of a sector is already the full-machine torque. The 0.2.0 warning
+- Measured scale rule (full machine vs N = 2 and N = 4, 12-slot 4-pole SPM): flux linkage, EMF,
+  coenergy, energy, circuit resistance (DC and 50 Hz) and coil resistive loss of a sector are x N
+  within 0.05 %, inductance x N within 0.12 %; the air-gap element torque (`mo_gapintegral`) of a
+  sector is already the full-machine torque (within 0.05 %). Iron losses: x N expected,
+  unmeasured. The 0.2.0 warning
   ("torque and flux linkage are for the sector as drawn; multiply by N") was wrong for the torque.
 - Experiments on a 1/N sector add `full_machine` {factor, rule, summary, notes} (rows and summary
   stay as drawn). Virtual-work and dq torques are put on the full-machine footing of the gap torque,

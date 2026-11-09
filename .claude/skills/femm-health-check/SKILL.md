@@ -70,7 +70,8 @@ Extra rows: `solution_matches_model` fails when the `.ans` on disk does not matc
 element count, max B, energy, coenergy, torques, forces, P_in, P_loss.
 
 Sector models: the experiment checks compare like with like (air-gap element torque, which is
-already full-machine, against virtual work from N x coenergy and dq torque from N x psi); with
+already full-machine, against virtual work from N x coenergy and dq torque from N x psi; both
+scale factors measured, see femm_facts "Sector models"); with
 weighted-stress-tensor torque on a sector the dq check is not applicable (scale not measured).
 
 Known weak spot: when `rotor_groups` and `stator_groups` are complementary, the WST weights of the

@@ -147,10 +147,12 @@ def sector_extent_deg(model: Any, center: Sequence[float] = (0.0, 0.0)) -> float
     return span if 1.0 < span < 359.0 else None
 
 
-SCALE_RULE = ("sector model, N = 360 / sector angle (measured on FEMM 5 build 20261101, 12-slot 4-pole SPM, "
-              "N = 2 and 4, within 0.05 %): flux linkage, EMF, Ke, inductance, coenergy, energy, losses and "
-              "resistance of the series circuits x N (the circuits hold one sector's coils); air-gap element torque "
-              "(mo_gapintegral) is already the full-machine torque (x 1); flux density, currents and angles x 1")
+SCALE_RULE = ("sector model, N = 360 / sector angle. Measured on FEMM 5 build 20261101 (12-slot 4-pole SPM, "
+              "N = 2 and 4) against the full machine: flux linkage, EMF, Ke, coenergy, energy, circuit resistance "
+              "(DC and 50 Hz) and coil resistive loss of the series circuits x N within 0.05 %, inductance x N "
+              "within 0.12 %; air-gap element torque (mo_gapintegral) is already the full-machine torque (x 1, "
+              "within 0.05 %); flux density, currents and angles x 1. Iron (hysteresis / eddy) losses: x N "
+              "expected (integral over the drawn blocks), unmeasured")
 
 # summary keys per experiment that scale with N ("flux") or follow the torque source ("torque")
 _SCALED = {
@@ -216,7 +218,8 @@ def sector_warnings(model: Any, center: Sequence[float] = (0.0, 0.0), slots: int
     k = 360.0 / ext
     if n:
         out = [f"model is a {ext:.4g} deg sector (1/{n} of the machine): rows and summary are as drawn; flux linkage, "
-               f"EMF, inductance, coenergy and losses are x {n} for the full machine, air-gap element torque is "
+               f"EMF, inductance, coenergy, resistance and copper loss are x {n} for the full machine (measured), "
+               "iron losses x N expected but unmeasured, air-gap element torque is "
                "already full-machine; `full_machine` holds the scaled values."]
     else:
         out = [f"model is a {ext:.4g} deg sector, which does not divide 360: no full-machine values are given."]

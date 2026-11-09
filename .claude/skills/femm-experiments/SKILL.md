@@ -16,9 +16,10 @@ returns:
 
 Read `health_summary` first (`verdict` PASS / CHECK / FAIL): each experiment carries its own
 consistency checks. Then `warnings`, and on a 1/N sector model `full_machine` {factor, rule,
-summary, notes}: rows and summary are as drawn; flux linkage, EMF, Ke, inductance, coenergy and
-losses are x N for the full machine; the air-gap element torque (`method="age"`) is already
-full-machine, and the derived torques in the rows (virtual work, dq) are put on that footing.
+summary, notes}: rows and summary are as drawn; flux linkage, EMF, Ke, coenergy, energy, circuit
+resistance and copper loss are x N for the full machine (measured within 0.05 %), inductance x N
+(within 0.12 %); iron losses x N expected but unmeasured; the air-gap element torque
+(`method="age"`) is already full-machine (within 0.05 %), and the derived torques in the rows (virtual work, dq) are put on that footing.
 Report the `full_machine` values for a machine, the as-drawn ones only for the sector itself. A requested group with no objects or a circuit that is not in the model is
 refused before the first solve, with the groups / circuits present in the message. More than 120 rows
 are thinned in the reply (the CSV has all). The JSON paths feed `femm_report` and

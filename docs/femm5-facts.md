@@ -503,13 +503,21 @@ use `method="age"`.
   | cogging peak to peak, `mo_gapintegral` (N m) | 0.383545 | 0.383385 x 1 | -0.042 % | 0.383439 x 1 | -0.027 % |
   | mean torque, id = 0, iq = 10 A, 0-30 deg (N m) | 1.41208 | 1.41229 x 1 | +0.015 % | 1.41258 x 1 | +0.035 % |
   | self inductance at 5 A (H) | 3.73903e-4 | 1.87090e-4 x 2 = 3.74180e-4 | +0.074 % | 9.35794e-5 x 4 = 3.74318e-4 | +0.111 % |
+  | DC resistance of A, V / I (ohm) | 0.0229885 | 0.0114943 x 2 = 0.0229885 | 0.000 % | 0.0057471 x 4 = 0.0229885 | 0.000 % |
+  | AC resistance of A at 50 Hz, Re V / I (ohm) | 0.0245646 | 0.0122827 x 2 = 0.0245653 | +0.003 % | 0.0061416 x 4 = 0.0245665 | +0.008 % |
+  | coil resistive loss, block integral 4, DC (W) | 3.44828 | 1.72414 x 2 = 3.44828 | 0.000 % | 0.86207 x 4 = 3.44828 | 0.000 % |
+  | coil resistive loss, 50 Hz (W, peak phasors) | 1.72414 | 0.86207 x 2 = 1.72414 | 0.000 % | 0.43103 x 4 = 1.72414 | 0.000 % |
 
   At one loaded position (5 deg, iq = 10 A) block-integral coenergy and energy of the sector are
   1/N of the full machine (ratios 2.00005 / 4.00024 and 1.99998 / 3.99986) and |B| in the gap is
   the same (0.1844 / 0.2551 T components, within 0.3 %).
-- So: **flux linkage, EMF, Ke, inductance, coenergy and energy of a sector are x N** (each series
-  circuit holds one sector's coils), **the air-gap element torque (`mo_gapintegral(..., 0)`) of a
-  sector is already the full-machine torque (x 1)**, flux density, currents and angles are x 1.
+  (Resistance and loss rows: iq = 10 A at 5 deg, magnetostatic and 50 Hz solves.)
+- So, measured: **flux linkage, EMF, Ke, coenergy, energy, circuit resistance and coil resistive
+  loss of a sector are x N within 0.05 %, inductance x N within 0.12 %** (each series circuit holds
+  one sector's coils), **the air-gap element torque (`mo_gapintegral(..., 0)`) of a sector is
+  already the full-machine torque (x 1, within 0.05 %)**, flux density, currents and angles are
+  x 1. Unmeasured: iron (hysteresis / eddy) losses, expected x N because block integrals cover only
+  the drawn blocks.
   The weighted-stress-tensor torque (block integral 22) on the rotor of an AGE model reads ~0
   (1e-16 N m, full and sector alike): the air-gap element encloses the rotor; use
   `mo_gapintegral` there.

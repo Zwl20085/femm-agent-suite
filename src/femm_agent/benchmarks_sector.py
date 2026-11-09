@@ -12,8 +12,10 @@ edges off the stator's cut lines, so the periodic pairs no longer match. Rotate 
 ``mi_modifyboundprop("AGE", 10, angle)`` (what the experiments' ``method="age"`` does).
 
 Every series circuit holds the coils of this sector only. Measured scale rule (docs/femm5-facts.md,
-"Sector models"): flux linkage, EMF, torque, coenergy and inductance of the full machine are N x
-the sector value; currents, flux densities and angles (periods) are the same.
+"Sector models", preflight.SCALE_RULE): flux linkage, EMF, coenergy, energy, circuit resistance and
+coil resistive loss of the full machine are N x the sector value (within 0.05 %), inductance N x
+(within 0.12 %); the air-gap element torque of the sector already is the full-machine torque;
+currents, flux densities and angles (periods) are the same. Iron losses: N x expected, unmeasured.
 """
 from __future__ import annotations
 
@@ -173,4 +175,6 @@ def build_spm_sector(link, path: str, *, sector: int, slots: int, p: int, rotor_
     helpers._save(link, path)
     return {"sector": int(sector), "sector_angle_deg": alpha, "sector_kind": kind, "slots_in_model": q,
             "poles_in_model": m, "scale_to_full_machine": int(sector),
-            "scale_rule": "flux linkage, EMF, torque, coenergy, inductance: x N; currents, B, angles: x 1"}
+            "scale_rule": "measured: flux linkage, EMF, coenergy, energy, resistance, copper loss x N (0.05 %), "
+                          "inductance x N (0.12 %), air-gap element torque x 1 (0.05 %); currents, B, angles x 1; "
+                          "iron losses x N unmeasured"}
